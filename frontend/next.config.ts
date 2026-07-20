@@ -47,6 +47,10 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Effects run once (like production). Avoids three.js re-initialising the
+  // WebGL background on React's dev-only double-mount; lint rules still enforce
+  // render purity, so nothing is lost.
+  reactStrictMode: false,
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

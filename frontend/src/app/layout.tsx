@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Toaster } from "@/components/ui/sonner";
-import { BackgroundPaths } from "@/components/ui/background-paths";
+import { RainbowShader } from "@/components/ui/rainbow-shader";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -13,8 +13,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   // preference on mount and lets the user switch.
   return (
     <html lang="en" data-theme="dark" suppressHydrationWarning>
-      <body>
-        <BackgroundPaths />
+      <body suppressHydrationWarning>
+        <RainbowShader />
         {children}
         <Toaster />
       </body>
