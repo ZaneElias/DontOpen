@@ -95,7 +95,18 @@ export function ReportStage({ job }: { job: JobSpec }) {
 
       <AiDisclosureBanner />
 
-      <Card className="border-action/30 bg-action/5">
+      <motion.div
+        initial={{ opacity: 0, y: 20, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: 0.12 }}
+        className="relative"
+      >
+        {/* spotlight glow behind the headline recommendation */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -inset-3 rounded-[2rem] bg-[radial-gradient(60%_55%_at_50%_0%,color-mix(in_srgb,var(--action)_28%,transparent),transparent_72%)] blur-2xl"
+        />
+        <Card className="relative border-action/30 bg-action/5">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Trophy className="size-4 text-action" /> Recommendation
@@ -117,7 +128,8 @@ export function ReportStage({ job }: { job: JobSpec }) {
             </audio>
           </div>
         </CardContent>
-      </Card>
+        </Card>
+      </motion.div>
 
       {report.red_flags.length > 0 && (
         <Alert variant="destructive">

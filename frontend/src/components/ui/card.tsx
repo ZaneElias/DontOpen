@@ -5,7 +5,11 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       className={cn(
-        "rounded-xl border border-line bg-paper-raised text-ink shadow-[0_1px_2px_rgba(28,37,48,0.04)]",
+        // Frosted-glass surface: translucent + backdrop blur so the animated
+        // background glows through the edges, with a soft depth shadow.
+        "rounded-xl border border-line/70 bg-paper-raised/80 text-ink backdrop-blur-md",
+        "shadow-[0_1px_2px_rgba(28,37,48,0.04)] supports-[backdrop-filter]:bg-paper-raised/70",
+        "[html[data-theme=dark]_&]:shadow-[0_10px_40px_-16px_rgba(0,0,0,0.55)]",
         className
       )}
       {...props}
