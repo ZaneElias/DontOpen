@@ -40,6 +40,14 @@ export default function Page() {
     return () => clearInterval(id);
   }, [loadHealth]);
 
+  // If any request discovers the backend lost this job (restart/redeploy),
+  // surface the recovery screen instead of letting a dead session linger.
+  useEffect(() => {
+    const onMissing = () => setSessionExpired(true);
+    window.addEventListener("callpilot:job-missing", onMissing);
+    return () => window.removeEventListener("callpilot:job-missing", onMissing);
+  }, []);
+
   const startFresh = useCallback(async (vertical?: string) => {
     // Guard: this is also wired to onClick handlers, which would pass a
     // MouseEvent as the first arg — coerce anything non-string to the default.
@@ -135,7 +143,7 @@ export default function Page() {
   }
 
   return (
-    <AppShell stage={stage} furthestReached={furthestReached} onNavigate={goToStage} health={health}>
+    <AppShell stage={stage} furthestReached={furthestReached} onNavigate={goToStage} health={health} onNewJob={() => startFresh()}>
       {stage === "brief" && (
         <BriefStage
           job={job}

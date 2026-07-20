@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { PhoneCall, ShieldCheck, AlertTriangle } from "lucide-react";
+import { PhoneCall, ShieldCheck, AlertTriangle, RotateCcw } from "lucide-react";
 import { StageProgress } from "@/components/stage-progress";
 import { ThemeToggle } from "@/components/theme-toggle";
 import type { HealthStatus, Stage } from "@/lib/types";
@@ -12,12 +12,14 @@ export function AppShell({
   furthestReached,
   onNavigate,
   health,
+  onNewJob,
   children,
 }: {
   stage: Stage;
   furthestReached: Stage;
   onNavigate: (stage: Stage) => void;
   health: HealthStatus | null;
+  onNewJob?: () => void;
   children: React.ReactNode;
 }) {
   return (
@@ -32,6 +34,7 @@ export function AppShell({
               <span className="font-serif text-lg font-semibold tracking-tight text-ink">CallPilot</span>
             </div>
             <div className="flex items-center gap-2 sm:hidden">
+              <NewJobButton onNewJob={onNewJob} />
               <ThemeToggle />
               <ConfigPill health={health} />
             </div>
@@ -39,6 +42,7 @@ export function AppShell({
           <div className="flex items-center justify-between gap-4 sm:justify-end">
             <StageProgress current={stage} furthestReached={furthestReached} onNavigate={onNavigate} />
             <div className="hidden items-center gap-2 sm:flex">
+              <NewJobButton onNewJob={onNewJob} />
               <ThemeToggle />
               <ConfigPill health={health} />
             </div>
@@ -69,6 +73,19 @@ export function AppShell({
         </AnimatePresence>
       </main>
     </div>
+  );
+}
+
+function NewJobButton({ onNewJob }: { onNewJob?: () => void }) {
+  if (!onNewJob) return null;
+  return (
+    <button
+      onClick={onNewJob}
+      title="Start a fresh comparison"
+      className="flex items-center gap-1.5 rounded-full border border-line px-2.5 py-1 text-xs font-medium text-ink-muted cp-transition hover:border-line-strong hover:text-ink"
+    >
+      <RotateCcw className="size-3.5" /> New job
+    </button>
   );
 }
 

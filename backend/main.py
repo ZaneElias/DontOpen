@@ -76,6 +76,108 @@ AUDIO_CACHE: Dict[str, bytes] = {}        # call_id -> synthesized MP3 (TTS repl
 REPORT_SUMMARY_CACHE: Dict[str, str] = {} # job_id -> last generated plain-language summary (for spoken replay)
 _STATE_LOCK = asyncio.Lock()
 
+# ── Durable state snapshot ─────────────────────────────────────────────────
+# The in-memory dicts above are the source of truth, but we snapshot them to a
+# small JSON file so a restart / redeploy doesn't strand an in-flight job with
+# the "No job with id ..." 404. Audio and report-summary caches are derived and
+# intentionally not persisted (they regenerate on demand).
+from pathlib import Path  # noqa: E402  (local to the persistence block)
+
+_STATE_DIR = Path(__file__).resolve().parent / ".state"
+_STATE_FILE = _STATE_DIR / "state.json"
+
+
+def _snapshot_state() -> Dict[str, Any]:
+    """Serialize JOBS/CALLS/QUOTES to plain JSON-able dicts. Call under _STATE_LOCK."""
+    return {
+        "jobs": {jid: j.model_dump(mode="json") for jid, j in JOBS.items()},
+        "calls": {jid: [c.model_dump(mode="json") for c in cs] for jid, cs in CALLS.items()},
+        "quotes": {jid: [q.model_dump(mode="json") for q in qs] for jid, qs in QUOTES.items()},
+    }
+
+
+def _write_snapshot(data: Dict[str, Any]) -> None:
+    """Write the snapshot to disk, best-effort. Prefers an atomic temp-file +
+    rename, but on Windows os.replace intermittently raises PermissionError
+    (WinError 5) when an indexer/AV momentarily holds the target — so we retry
+    a few times and fall back to a direct write rather than losing the snapshot."""
+    try:
+        _STATE_DIR.mkdir(exist_ok=True)
+        payload = json.dumps(data)
+        tmp = _STATE_FILE.with_suffix(".tmp")
+        tmp.write_text(payload, encoding="utf-8")
+        for attempt in range(4):
+            try:
+                tmp.replace(_STATE_FILE)
+                return
+            except PermissionError:
+                if attempt == 3:
+                    # Give up on the atomic path; write directly. The loader
+                    # tolerates a torn read (falls back to empty), and the next
+                    # 2s snapshot heals it.
+                    _STATE_FILE.write_text(payload, encoding="utf-8")
+                    return
+                time.sleep(0.05)
+    except Exception:
+        logger.warning("Could not persist state snapshot", exc_info=True)
+
+
+def _load_state() -> None:
+    """Restore JOBS/CALLS/QUOTES from the last snapshot, if any. Best-effort:
+    a corrupt or partially-parseable snapshot never blocks startup."""
+    if not _STATE_FILE.exists():
+        return
+    try:
+        data = json.loads(_STATE_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        logger.warning("Could not read state snapshot; starting empty", exc_info=True)
+        return
+    for jid, jd in data.get("jobs", {}).items():
+        try:
+            JOBS[jid] = JobSpec(**jd)
+        except Exception:
+            continue
+    for jid, cs in data.get("calls", {}).items():
+        try:
+            CALLS[jid] = [CallRecord(**c) for c in cs]
+        except Exception:
+            continue
+    for jid, qs in data.get("quotes", {}).items():
+        try:
+            QUOTES[jid] = [Quote(**q) for q in qs]
+        except Exception:
+            continue
+    # Keep the per-job invariant create_intake establishes: every job has a
+    # (possibly empty) calls/quotes bucket.
+    for jid in JOBS:
+        CALLS.setdefault(jid, [])
+        QUOTES.setdefault(jid, [])
+    logger.info("Restored %d job(s) from state snapshot", len(JOBS))
+
+
+@app.on_event("startup")
+async def _restore_and_watch_state() -> None:
+    _load_state()
+
+    async def _periodic() -> None:
+        while True:
+            await asyncio.sleep(2)
+            try:
+                async with _STATE_LOCK:
+                    data = _snapshot_state()
+                _write_snapshot(data)  # disk I/O outside the lock
+            except Exception:
+                logger.warning("Periodic state snapshot failed", exc_info=True)
+
+    asyncio.create_task(_periodic())
+
+
+@app.on_event("shutdown")
+async def _persist_on_shutdown() -> None:
+    async with _STATE_LOCK:
+        data = _snapshot_state()
+    _write_snapshot(data)
+
 MAX_UPLOAD_BYTES = 12 * 1024 * 1024  # 12 MB
 MAX_STR_LEN = 2000  # cap any free-text field the intake accepts
 MAX_ARRAY_ITEMS = 50

@@ -32,9 +32,9 @@ export function RainbowShader() {
         float rx = p.x * (1.0 + d);
         float gx = p.x;
         float bx = p.x * (1.0 - d);
-        float r = 0.035 / abs(p.y + sin((rx + time) * xScale) * yScale);
-        float g = 0.035 / abs(p.y + sin((gx + time) * xScale) * yScale);
-        float b = 0.035 / abs(p.y + sin((bx + time) * xScale) * yScale);
+        float r = 0.06 / abs(p.y + sin((rx + time) * xScale) * yScale);
+        float g = 0.06 / abs(p.y + sin((gx + time) * xScale) * yScale);
+        float b = 0.06 / abs(p.y + sin((bx + time) * xScale) * yScale);
         gl_FragColor = vec4(r, g, b, 1.0);
       }
     `;
@@ -97,9 +97,9 @@ export function RainbowShader() {
 
   return (
     <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
-      <div ref={containerRef} className="h-full w-full opacity-60" />
+      <div ref={containerRef} className="h-full w-full opacity-90" />
       {/* dark veil so text stays readable over the bright rainbow */}
-      <div className="absolute inset-0 bg-[#05070d]/55" />
+      <div className="absolute inset-0 bg-[#05070d]/35" />
     </div>
   );
 }

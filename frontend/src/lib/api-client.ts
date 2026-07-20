@@ -38,6 +38,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
         : typeof (body as { detail?: string })?.detail === "string"
           ? (body as { detail: string }).detail
           : res.statusText;
+    // A missing-job 404 means the backend lost this job (restart/redeploy).
+    // Broadcast it so the app can recover to a fresh job instead of the user
+    // getting stuck on a dead session that only a new tab clears.
+    if (res.status === 404 && typeof window !== "undefined" && /no job with id/i.test(message || "")) {
+      window.dispatchEvent(new CustomEvent("callpilot:job-missing"));
+    }
     throw new ApiError(res.status, message || `Request failed (${res.status})`, body);
   }
 
