@@ -40,12 +40,15 @@ export default function Page() {
     return () => clearInterval(id);
   }, [loadHealth]);
 
-  const startFresh = useCallback(async () => {
+  const startFresh = useCallback(async (vertical?: string) => {
+    // Guard: this is also wired to onClick handlers, which would pass a
+    // MouseEvent as the first arg — coerce anything non-string to the default.
+    const chosen = typeof vertical === "string" ? vertical : "moving";
     session.clear();
     setSessionExpired(false);
     setInitializing(true);
     try {
-      const newJob = await api.createIntake("moving");
+      const newJob = await api.createIntake(chosen);
       session.setJobId(newJob.job_id);
       session.setStage("brief");
       setJob(newJob);
@@ -61,7 +64,7 @@ export default function Page() {
   useEffect(() => {
     const existingJobId = session.getJobId();
     if (!existingJobId) {
-      void Promise.resolve().then(startFresh);
+      void Promise.resolve().then(() => startFresh());
       return;
     }
     api
@@ -114,7 +117,7 @@ export default function Page() {
               CallPilot keeps job state in memory on the backend — a server restart or redeploy clears it. Start a
               new job to continue; nothing about your previous move details was saved.
             </p>
-            <Button size="sm" onClick={startFresh}>
+            <Button size="sm" onClick={() => startFresh()}>
               <RotateCcw className="size-3.5" /> Start a new job
             </Button>
           </AlertDescription>
@@ -134,7 +137,13 @@ export default function Page() {
   return (
     <AppShell stage={stage} furthestReached={furthestReached} onNavigate={goToStage} health={health}>
       {stage === "brief" && (
-        <BriefStage job={job} health={health} onJobUpdated={handleJobUpdated} onConfirmed={handleConfirmed} />
+        <BriefStage
+          job={job}
+          health={health}
+          onJobUpdated={handleJobUpdated}
+          onConfirmed={handleConfirmed}
+          onSwitchVertical={(v) => startFresh(v)}
+        />
       )}
       {stage === "calls" && (
         <CallsStage job={job} health={health} onCallsStarted={() => {}} onAdvance={() => goToStage("negotiate")} />

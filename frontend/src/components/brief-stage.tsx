@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Upload, Sparkles, CheckCircle2, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { VoiceIntakeWidget } from "@/components/voice-intake-widget";
 import { Hero } from "@/components/hero";
+import { GenericIntakeForm } from "@/components/generic-intake-form";
 import { api, ApiError } from "@/lib/api-client";
 import type { HealthStatus, JobSpec } from "@/lib/types";
 
@@ -57,12 +58,15 @@ export function BriefStage({
   health,
   onJobUpdated,
   onConfirmed,
+  onSwitchVertical,
 }: {
   job: JobSpec;
   health: HealthStatus | null;
   onJobUpdated: (job: JobSpec) => void;
   onConfirmed: (job: JobSpec) => void;
+  onSwitchVertical: (vertical: string) => void;
 }) {
+  const isMoving = job.vertical === "moving";
   const [form, setForm] = useState<FormState>(() => jobToForm(job));
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -157,25 +161,34 @@ export function BriefStage({
   return (
     <div className="space-y-6">
       <Hero />
-      <div>
-        <h1 className="font-serif text-2xl font-semibold text-ink">Tell us about your move</h1>
-        <p className="mt-1 text-sm text-ink-muted">
-          This becomes the exact job spec every mover hears — the same details, in the same words, every call.
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="font-serif text-2xl font-semibold text-ink">
+            {isMoving ? "Tell us about your move" : `Tell us about your ${job.vertical.replace(/_/g, " ")} job`}
+          </h1>
+          <p className="mt-1 text-sm text-ink-muted">
+            This becomes the exact job spec every business hears — the same details, in the same words, every call.
+          </p>
+        </div>
+        <VerticalPicker current={job.vertical} onSwitch={onSwitchVertical} />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Sparkles className="size-4 text-action" /> Voice interview
-          </CardTitle>
-          <CardDescription>Talk through your move — takes about three minutes.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <VoiceIntakeWidget agentId={health?.interview_agent_id ?? null} jobId={job.job_id} />
-        </CardContent>
-      </Card>
+      {isMoving && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="size-4 text-action" /> Voice interview
+            </CardTitle>
+            <CardDescription>Talk through your move — takes about three minutes.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <VoiceIntakeWidget agentId={health?.interview_agent_id ?? null} jobId={job.job_id} />
+          </CardContent>
+        </Card>
+      )}
 
+      {isMoving ? (
+        <>
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -300,6 +313,35 @@ export function BriefStage({
           </div>
         </CardContent>
       </Card>
+        </>
+      ) : (
+        <GenericIntakeForm job={job} onJobUpdated={onJobUpdated} onConfirmed={onConfirmed} />
+      )}
+    </div>
+  );
+}
+
+function VerticalPicker({ current, onSwitch }: { current: string; onSwitch: (v: string) => void }) {
+  const [verticals, setVerticals] = useState<{ vertical: string; display_name: string }[]>([]);
+  useEffect(() => {
+    api.listVerticals().then(setVerticals).catch(() => {});
+  }, []);
+  if (verticals.length <= 1) return null;
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs text-ink-muted">Market · config-driven</Label>
+      <Select value={current} onValueChange={(v) => v !== current && onSwitch(v)}>
+        <SelectTrigger className="w-56">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {verticals.map((v) => (
+            <SelectItem key={v.vertical} value={v.vertical}>
+              {v.display_name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }

@@ -79,9 +79,19 @@ class JobSpec(BaseModel):
                 return ", ".join(str(v) for v in value) if value else "none"
             return value
 
-        ctx = {"job_id": self.job_id, "vertical": self.vertical}
+        ctx: Dict[str, Any] = {
+            "job_id": self.job_id,
+            "vertical": self.vertical,
+            "vertical_display": self.vertical.replace("_", " "),
+        }
+        summary_parts = []
         for key, value in self.fields.items():
             ctx[key] = coerce(value)
+            if ctx[key] not in ("not specified", "none", "", None):
+                summary_parts.append(f"{key.replace('_', ' ')}: {ctx[key]}")
+        # One readable line describing the whole job, so a vertical-agnostic
+        # Caller agent can present it without knowing the field names ahead of time.
+        ctx["job_summary"] = "; ".join(summary_parts) if summary_parts else "no details provided"
         return ctx
 
 

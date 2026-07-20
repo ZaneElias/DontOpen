@@ -1,0 +1,72 @@
+# Vertical config: AUTO REPAIR
+#
+# Proof that CallPilot is config-driven: this file alone defines a completely
+# different market (car repair shops) — schema, benchmarks, red-flag rules,
+# negotiation levers, and counterparty personas. No change to main.py,
+# schema.py, or the frontend. The Caller/interview agents are vertical-agnostic
+# (they read {{vertical_display}} + {{job_summary}} dynamic variables).
+
+vertical: auto_repair
+display_name: "Auto Repair Shops"
+
+# ── Job spec taxonomy ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+job_spec_schema:
+  vehicle_year: {type: number, required: true, asked_by_interview: true}
+  vehicle_make: {type: string, required: true, asked_by_interview: true, example: ["Toyota", "Honda", "Ford"]}
+  vehicle_model: {type: string, required: true, asked_by_interview: true}
+  mileage: {type: number, required: false, asked_by_interview: true}
+  symptom: {type: string, required: true, asked_by_interview: true, description: "what's wrong — the noise, warning light, or behavior"}
+  suspected_issue: {type: string, required: false, asked_by_interview: true, example: ["brake pads", "alternator", "timing belt"]}
+  service_type: {type: string, required: true, enum: [diagnostic, repair, maintenance], asked_by_interview: true}
+  parts_preference: {type: string, required: false, enum: [oem, aftermarket, either], asked_by_interview: true}
+  urgency: {type: string, required: false, enum: [same_day, this_week, flexible], asked_by_interview: true}
+  location: {type: string, required: true, asked_by_interview: true, description: "city or zip to find shops"}
+  special_notes: {type: string, required: false, asked_by_interview: true}
+
+# ── Price benchmarks (ground truth for red-flag detection) ──────────────────────────────────────────────────────────────────────────────────────
+price_benchmark:
+  source: "RepairPal fair-price ranges + aggregate shop quotes (see README for citations)"
+  reference_job: "front brake pad + rotor replacement, mid-size sedan"
+  low_usd: 250
+  median_usd: 450
+  high_usd: 950
+  diagnostic_fee_usd: 120
+
+# ── Red-flag rules ────────────────────────────────────────────────────────────────────────────────────────────────
+red_flag_rules:
+  - id: below_market_30pct
+    description: "Any total 30%+ below the benchmark median is a warning sign, not a win — classic bait price that balloons once they 'find more damage'."
+    threshold_pct_below_median: 30
+  - id: no_binding_commitment
+    description: "Quote given but the shop won't confirm the number is firm without putting the car on the lift."
+  - id: cash_only_or_large_deposit
+    description: "Cash-only payment or a large upfront deposit before any work — a common upcharge/hostage precursor."
+
+# ── Negotiation levers ───────────────────────────────────────────────────────────────────────────────────
+negotiation_levers:
+  - id: cite_competing_quote
+    description: "State the lowest binding competing total and ask this shop to beat or match it. Never state a number that isn't an actual gathered quote."
+  - id: question_itemized_fee
+    description: "Ask for justification of any fee not itemized (e.g. 'shop supplies' or 'disposal' with no amount)."
+  - id: ask_price_match
+    description: "Ask 'can you match $X' rather than open-ended 'can you do better'."
+  - id: ask_extras_at_same_price
+    description: "If price won't move, ask whether a courtesy inspection, a warranty, or a loaner can be added at no cost."
+
+# ── Counterparty roster (per-vertical personas, loaded from prompt files) ───────────────────────────────────────────────────────────────────────
+counterparty_styles:
+  tough_negotiator:
+    prompt_file: prompts/counterparty_auto_tough.md
+    company_name: "Precision Auto Works"
+    first_message: "Precision Auto, this is Mike — what're we lookin' at?"
+    description: "Quotes high first, negotiates hard, concedes only against real competing numbers."
+  stonewaller:
+    prompt_file: prompts/counterparty_auto_stonewall.md
+    company_name: "Downtown Garage"
+    first_message: "Downtown Garage, hang on— yeah, go ahead."
+    description: "Won't quote without seeing the car; needs to be worked past 'gotta put it on the lift'."
+  hard_sell_upseller:
+    prompt_file: prompts/counterparty_auto_hardsell.md
+    company_name: "ValueLube & Repair"
+    first_message: "ValueLube, best prices in town! What can we fix up for ya?"
+    description: "Quotes low to hook you, then piles on fees and 'while we're in there' upsells."

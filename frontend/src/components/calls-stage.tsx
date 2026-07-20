@@ -159,7 +159,7 @@ export function CallsStage({
       <div>
         <h1 className="font-serif text-2xl font-semibold text-ink">Gather quotes</h1>
         <p className="mt-1 text-sm text-ink-muted">
-          Every call describes your move identically — same spec, every time — so the quotes are actually comparable.
+          Every call describes your job identically — same spec, every time — so the quotes are actually comparable.
         </p>
       </div>
 
@@ -188,7 +188,9 @@ export function CallsStage({
               </Button>
             </div>
 
-            {mode === "demo" && <DemoPersonaPicker onAdd={addDemoPersona} draftTargets={draftTargets} />}
+            {mode === "demo" && (
+              <DemoPersonaPicker onAdd={addDemoPersona} draftTargets={draftTargets} vertical={job.vertical} />
+            )}
 
             {mode === "real" && (
               <div className="space-y-4">
@@ -302,15 +304,20 @@ export function CallsStage({
 function DemoPersonaPicker({
   onAdd,
   draftTargets,
+  vertical,
 }: {
   onAdd: (style: NegotiationStyle, label: string) => void;
   draftTargets: DraftTarget[];
+  vertical: string;
 }) {
-  const [roster, setRoster] = useState<{ style: string; description: string; configured: boolean }[] | null>(null);
+  const [roster, setRoster] = useState<
+    { style: string; description: string; configured: boolean; company_name?: string }[] | null
+  >(null);
 
   useEffect(() => {
-    api.counterpartyRoster().then(setRoster).catch(() => setRoster([]));
-  }, []);
+    setRoster(null);
+    api.counterpartyRoster(vertical).then(setRoster).catch(() => setRoster([]));
+  }, [vertical]);
 
   if (roster == null) return <Skeleton className="h-24 w-full" />;
 

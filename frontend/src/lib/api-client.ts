@@ -51,6 +51,8 @@ export const api = {
   createIntake: (vertical = "moving") =>
     request<JobSpec>("/intake", { method: "POST", body: JSON.stringify({ vertical }) }),
 
+  listVerticals: () => request<{ vertical: string; display_name: string }[]>("/verticals"),
+
   getIntake: (jobId: string) => request<JobSpec>(`/intake/${jobId}`),
 
   getIntakeSchema: (jobId: string) => request<JobSpecSchema>(`/intake/${jobId}/schema`),
@@ -74,8 +76,10 @@ export const api = {
       `/call-list/search?category=${encodeURIComponent(category)}&location=${encodeURIComponent(location)}&max_results=${maxResults}`
     ),
 
-  counterpartyRoster: () =>
-    request<{ style: string; description: string; configured: boolean }[]>("/calls/counterparty-roster"),
+  counterpartyRoster: (vertical = "moving") =>
+    request<{ style: string; description: string; configured: boolean; company_name?: string }[]>(
+      `/calls/counterparty-roster?vertical=${encodeURIComponent(vertical)}`
+    ),
 
   startCalls: (
     jobId: string,

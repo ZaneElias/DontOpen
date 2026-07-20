@@ -225,6 +225,20 @@ def health() -> Dict[str, Any]:
 # Estimator — intake
 # ──────────────────────────────────────────────────────────────────────────
 
+@app.get("/verticals")
+def list_verticals() -> List[Dict[str, Any]]:
+    """Every configured vertical (one YAML file each) — the config-driven proof:
+    add a file in configs/ and it shows up here, no code change."""
+    out = []
+    for path in sorted(config.CONFIGS_DIR.glob("*.yaml")):
+        try:
+            vc = config.load_vertical_config(path.stem)
+            out.append({"vertical": vc["vertical"], "display_name": vc.get("display_name", path.stem)})
+        except Exception:
+            continue
+    return out
+
+
 class IntakeCreateRequest(BaseModel):
     vertical: str = "moving"
 
@@ -414,12 +428,15 @@ class CallStartRequest(BaseModel):
 
 
 @app.get("/calls/counterparty-roster")
-def counterparty_roster() -> List[Dict[str, Any]]:
+def counterparty_roster(vertical: str = "moving") -> List[Dict[str, Any]]:
     """Non-secret roster of the built demo counterparty personas — names and
     descriptions only, never the phone numbers. The frontend uses this to
     offer a one-click 'call all three personas' demo path; phone numbers are
     resolved server-side in start_calls."""
-    vconfig = config.load_vertical_config("moving")
+    try:
+        vconfig = config.load_vertical_config(vertical)
+    except config.VerticalConfigError:
+        vconfig = config.load_vertical_config("moving")
     mode = config.call_mode()
     roster = []
     for style, meta in vconfig["counterparty_styles"].items():
@@ -1145,8 +1162,12 @@ async def negotiation_webhook(job_id: str, call_id: str, body: QuoteWebhookBody)
 
 def _apply_red_flags(job: JobSpec, quotes: List[Quote], vconfig: Dict[str, Any]) -> List[str]:
     benchmark = vconfig["price_benchmark"]
-    bedrooms = job.fields.get("bedrooms") or 2
-    scaled_median = benchmark["median_usd"] + benchmark["per_bedroom_adjustment_usd"] * (bedrooms - 2)
+    scaled_median = benchmark["median_usd"]
+    # Optional vertical-specific scaling: moving scales the median by bedroom
+    # count. Applied only when the config defines the knob and the job has the
+    # field, so other verticals (auto repair, etc.) use the flat median.
+    if "per_bedroom_adjustment_usd" in benchmark and job.fields.get("bedrooms"):
+        scaled_median += benchmark["per_bedroom_adjustment_usd"] * ((job.fields.get("bedrooms") or 2) - 2)
     threshold_pct = next(
         (r["threshold_pct_below_median"] for r in vconfig["red_flag_rules"] if r["id"] == "below_market_30pct"),
         30,

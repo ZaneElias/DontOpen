@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { motion } from "framer-motion";
 import { Trophy, AlertTriangle, FileText, RefreshCw, ShieldCheck, Volume2, Download } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,8 +11,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { api, ApiError } from "@/lib/api-client";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { cn } from "@/lib/utils";
 import type { JobSpec, Quote, RankedQuote, Report } from "@/lib/types";
+
+const usd = (n: number) => `$${Math.round(n).toLocaleString()}`;
 
 export function ReportStage({ job }: { job: JobSpec }) {
   const [report, setReport] = useState<Report | null>(null);
@@ -130,9 +134,20 @@ export function ReportStage({ job }: { job: JobSpec }) {
       )}
 
       <div className="grid grid-cols-3 gap-3">
-        <SpreadStat label="Lowest" value={report.market_spread.min} />
-        <SpreadStat label="Median" value={report.market_spread.median} />
-        <SpreadStat label="Highest" value={report.market_spread.max} />
+        {[
+          { label: "Lowest", value: report.market_spread.min },
+          { label: "Median", value: report.market_spread.median },
+          { label: "Highest", value: report.market_spread.max },
+        ].map((s, i) => (
+          <motion.div
+            key={s.label}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <SpreadStat label={s.label} value={s.value} />
+          </motion.div>
+        ))}
       </div>
 
       {/* Desktop table */}
@@ -171,7 +186,9 @@ function SpreadStat({ label, value }: { label: string; value: number }) {
     <Card>
       <CardContent className="p-4 text-center">
         <p className="text-xs uppercase tracking-wide text-ink-muted">{label}</p>
-        <p className="mt-1 text-lg font-semibold text-ink">${value.toLocaleString()}</p>
+        <p className="mt-1 text-lg font-semibold text-ink">
+          <AnimatedNumber value={value} format={usd} />
+        </p>
       </CardContent>
     </Card>
   );
@@ -197,7 +214,7 @@ function ReportRow({ rq, isRecommended }: { rq: RankedQuote; isRecommended: bool
                 className="font-medium underline decoration-dotted underline-offset-4 hover:text-action cp-transition"
                 title="View transcript evidence for this price"
               >
-                ${price?.toLocaleString() ?? "—"}
+                {price != null ? <AnimatedNumber value={price} format={usd} /> : "—"}
               </button>
             }
           />
@@ -235,7 +252,7 @@ function ReportCard({ rq, isRecommended }: { rq: RankedQuote; isRecommended: boo
           rq={rq}
           trigger={
             <button className="text-lg font-semibold text-ink underline decoration-dotted underline-offset-4 hover:text-action cp-transition">
-              ${price?.toLocaleString() ?? "—"}
+              {price != null ? <AnimatedNumber value={price} format={usd} /> : "—"}
             </button>
           }
         />
