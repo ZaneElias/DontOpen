@@ -189,6 +189,8 @@ export function NegotiateStage({
                 after={companyQuote?.post_negotiation_total ?? null}
                 status={callbackCall?.status ?? "queued"}
                 notes={companyQuote?.negotiation_notes ?? null}
+                leverageCompany={cheapest?.company_name ?? null}
+                leverageTotal={cheapest?.total_price ?? null}
               />
             );
           })}
@@ -221,12 +223,16 @@ function PriceMoveCard({
   after,
   status,
   notes,
+  leverageCompany,
+  leverageTotal,
 }: {
   companyName: string;
   before: number | null;
   after: number | null;
   status: string;
   notes: string | null;
+  leverageCompany?: string | null;
+  leverageTotal?: number | null;
 }) {
   const moved = before != null && after != null && before !== after;
   const isTerminal = ["completed", "failed", "no_answer"].includes(status);
@@ -240,7 +246,19 @@ function PriceMoveCard({
         </div>
         <div className="flex items-center gap-3">
           {!isTerminal ? (
-            <Badge variant="live">Calling back…</Badge>
+            <div className="flex flex-col items-end gap-1">
+              <Badge variant="live">
+                <span className="mr-1 inline-block size-1.5 animate-pulse rounded-full bg-current" />
+                Calling back…
+              </Badge>
+              {leverageCompany && leverageTotal != null && before != null && (
+                <span className="text-[11px] text-ink-muted">
+                  citing {leverageCompany}&apos;s{" "}
+                  <span className="font-semibold text-status-done">${leverageTotal.toLocaleString()}</span> vs their{" "}
+                  <span className="font-semibold text-ink">${before.toLocaleString()}</span>
+                </span>
+              )}
+            </div>
           ) : (
             <>
               <span className={cn("text-sm", moved ? "text-ink-muted line-through" : "text-ink")}>

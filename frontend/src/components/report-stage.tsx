@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Trophy, AlertTriangle, FileText, RefreshCw, ShieldCheck, Volume2 } from "lucide-react";
+import { Trophy, AlertTriangle, FileText, RefreshCw, ShieldCheck, Volume2, Download } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -79,9 +79,14 @@ export function ReportStage({ job }: { job: JobSpec }) {
             Generated from {report.ranked_quotes.length} usable quote(s) — click any price to see its transcript evidence.
           </p>
         </div>
-        <Button size="sm" variant="outline" onClick={load}>
-          <RefreshCw className="size-3.5" /> Refresh
-        </Button>
+        <div className="flex gap-2 print:hidden">
+          <Button size="sm" variant="outline" onClick={load}>
+            <RefreshCw className="size-3.5" /> Refresh
+          </Button>
+          <Button size="sm" onClick={() => window.print()}>
+            <Download className="size-3.5" /> Save as PDF
+          </Button>
+        </div>
       </div>
 
       <AiDisclosureBanner />
