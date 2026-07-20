@@ -115,11 +115,17 @@ export function BriefStage({
 
   async function handleUpload(file: File) {
     setUploading(true);
+    const before = Object.keys(job.fields ?? {}).length;
     try {
       const updated = await api.uploadDocument(job.job_id, file);
       onJobUpdated(updated);
       setForm(jobToForm(updated));
-      toast.success("Extracted details from your document — review below before confirming");
+      const added = Object.keys(updated.fields ?? {}).length - before;
+      if (added > 0) {
+        toast.success(`Read ${added} detail${added === 1 ? "" : "s"} from your document — they're filled into the form below.`);
+      } else {
+        toast.info("Couldn't read any move details from that image. It works best on an existing quote or inventory list — or just fill the form below.");
+      }
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Document extraction failed");
     } finally {

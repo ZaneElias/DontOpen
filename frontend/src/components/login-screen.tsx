@@ -21,7 +21,7 @@ export function LoginScreen({ onEnter }: { onEnter: () => void }) {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-paper p-4 text-ink">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-transparent p-4 text-ink">
       {/* ambient accent glows */}
       <div className="pointer-events-none absolute -left-40 -top-40 size-[36rem] rounded-full bg-[radial-gradient(circle,color-mix(in_srgb,var(--action)_22%,transparent),transparent_65%)] blur-3xl" />
       <div className="pointer-events-none absolute -bottom-52 -right-32 size-[40rem] rounded-full bg-[radial-gradient(circle,rgba(168,85,247,0.14),transparent_65%)] blur-3xl" />

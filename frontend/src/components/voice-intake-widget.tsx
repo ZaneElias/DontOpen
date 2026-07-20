@@ -47,7 +47,12 @@ export function VoiceIntakeWidget({ agentId, jobId }: { agentId: string | null; 
   }
 
   return (
-    <div ref={containerRef} className="flex min-h-40 items-center justify-center rounded-lg border border-line bg-paper p-6">
+    <div ref={containerRef} className="flex min-h-40 flex-col items-center justify-center gap-2 rounded-lg border border-line bg-paper p-6 text-center">
+      <p className="max-w-sm text-sm text-ink-muted">
+        The voice assistant opens as a bubble at the{" "}
+        <span className="font-medium text-ink">bottom-right of your screen</span>. Click it, allow your microphone,
+        and talk through your move.
+      </p>
       {(() => {
         const Widget = "elevenlabs-convai" as any;
         return (
