@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Mic } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -22,7 +23,9 @@ const WIDGET_SCRIPT_SRC = "https://unpkg.com/@elevenlabs/convai-widget-embed";
  * spec — it produces the identical JobSpec.
  */
 export function VoiceIntakeWidget({ agentId, jobId }: { agentId: string | null; jobId: string }) {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     if (!agentId) return;
@@ -46,25 +49,31 @@ export function VoiceIntakeWidget({ agentId, jobId }: { agentId: string | null; 
     );
   }
 
+  // The <elevenlabs-convai> widget renders a position:fixed bubble. Rendered
+  // inline it would be trapped by any ancestor with transform/filter/
+  // backdrop-filter (the glass cards + the cinematic stage transition), which
+  // re-anchors fixed elements to that ancestor instead of the viewport. So we
+  // portal it to <body> — outside the animated app subtree — where its
+  // bottom-right positioning stays glued to the viewport as intended.
+  const Widget = "elevenlabs-convai" as any;
   return (
-    <div ref={containerRef} className="flex min-h-40 flex-col items-center justify-center gap-2 rounded-lg border border-line bg-paper p-6 text-center">
+    <div className="flex min-h-40 flex-col items-center justify-center gap-2 rounded-lg border border-line bg-paper p-6 text-center">
       <p className="max-w-sm text-sm text-ink-muted">
         The voice assistant opens as a bubble at the{" "}
         <span className="font-medium text-ink">bottom-right of your screen</span>. Click it, allow your microphone,
         and talk through your move.
       </p>
-      {(() => {
-        const Widget = "elevenlabs-convai" as any;
-        return (
+      {mounted &&
+        createPortal(
           <Widget
             agent-id={agentId}
             dynamic-variables={JSON.stringify({ job_id: jobId })}
             action-text="Talk to the CallPilot intake assistant"
             start-call-text="Start voice interview"
             end-call-text="End interview"
-          />
-        );
-      })()}
+          />,
+          document.body
+        )}
     </div>
   );
 }
