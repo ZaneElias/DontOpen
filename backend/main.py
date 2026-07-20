@@ -372,6 +372,20 @@ def get_intake_schema(job_id: str) -> Dict[str, Any]:
     return vconfig["job_spec_schema"]
 
 
+def _prune_needs_review(job: JobSpec, entered_keys: set) -> None:
+    """Called on an explicit manual-form save. The human has reviewed the spec,
+    so drop freeform extraction observations (e.g. "No addresses … provided")
+    and clear any `unconfirmed: X` flag for a field they just entered. Uncertain
+    flags for fields they didn't touch are kept."""
+    kept: List[str] = []
+    for note in job.needs_review:
+        if note.startswith("unconfirmed: "):
+            if note[len("unconfirmed: "):].strip() not in entered_keys:
+                kept.append(note)  # user didn't touch this field → still flagged
+        # freeform notes are intentionally dropped (not re-added) on a manual save
+    job.needs_review = kept
+
+
 def _merge_fields(job: JobSpec, fields: Dict[str, Any], source: IntakeSource, confidence: str = "confirmed") -> None:
     fields = _sanitize_fields(job.vertical, fields)  # server-side validation, every intake path
     for key, value in fields.items():
@@ -383,6 +397,11 @@ def _merge_fields(job: JobSpec, fields: Dict[str, Any], source: IntakeSource, co
             note = f"unconfirmed: {key}"
             if note not in job.needs_review:
                 job.needs_review.append(note)
+    # A manual-form save is the human reviewing the spec: clear stale freeform
+    # notes and any uncertain flag for the fields they just entered. Extraction
+    # paths (voice/document) only add flags here — they never prune.
+    if source == IntakeSource.MANUAL_FORM:
+        _prune_needs_review(job, set(fields.keys()))
 
 
 @app.post("/intake/{job_id}/update")

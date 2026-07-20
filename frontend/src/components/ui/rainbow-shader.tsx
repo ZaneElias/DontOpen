@@ -96,10 +96,11 @@ export function RainbowShader() {
   }, []);
 
   return (
-    <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
-      <div ref={containerRef} className="h-full w-full opacity-90" />
-      {/* dark veil so text stays readable over the bright rainbow */}
-      <div className="absolute inset-0 bg-[#05070d]/35" />
+    <div className="cp-rainbow-root pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
+      <div ref={containerRef} className="cp-rainbow-canvas h-full w-full" />
+      {/* Theme-aware veil so text stays readable: a dark cinematic veil in dark
+          mode, a soft light wash in light mode (see globals.css). */}
+      <div className="cp-rainbow-veil absolute inset-0" />
     </div>
   );
 }

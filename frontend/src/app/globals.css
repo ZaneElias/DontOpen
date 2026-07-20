@@ -106,6 +106,24 @@ body {
   background: transparent;
 }
 
+/* Animated rainbow background (rainbow-shader.tsx). The shader canvas renders a
+   black field with glowing colour arcs, so the veil on top is what adapts to
+   the theme: a dark cinematic veil in dark mode, and a near-opaque light wash
+   in light mode that turns the black field into warm paper with only faint
+   pastel arcs showing through — keeping light mode clean and readable. */
+.cp-rainbow-canvas {
+  opacity: 0.7;
+}
+.cp-rainbow-veil {
+  background: rgba(247, 243, 236, 0.85);
+}
+:root[data-theme="dark"] .cp-rainbow-canvas {
+  opacity: 0.9;
+}
+:root[data-theme="dark"] .cp-rainbow-veil {
+  background: rgba(5, 7, 13, 0.35);
+}
+
 @media (prefers-reduced-motion: no-preference) {
   html {
     transition: background-color 240ms ease, color 240ms ease;
@@ -143,6 +161,9 @@ body {
   html,
   body {
     background: #ffffff !important;
+  }
+  .cp-rainbow-root {
+    display: none !important;
   }
   header,
   audio,
