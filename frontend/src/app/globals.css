@@ -91,10 +91,19 @@
   border-color: var(--line);
 }
 
+/* html keeps the solid colour as a fallback (behind the fixed WebGL background);
+   body is transparent so the -z-10 rainbow isn't painted over by the body box. */
+html {
+  background: var(--paper);
+}
+
 html,
 body {
-  background: var(--paper);
   color: var(--ink);
+}
+
+body {
+  background: transparent;
 }
 
 @media (prefers-reduced-motion: no-preference) {
