@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import { Phone, PhoneCall, PhoneOff, Search, Plus, X, Loader2, FileText, ArrowRight } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -82,6 +83,23 @@ export function CallsStage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [started]);
 
+  // Persistence-aware: if this job already has calls (e.g. the user reloaded
+  // mid- or post-run), jump straight to the live results view instead of
+  // showing the persona picker as if nothing had happened.
+  useEffect(() => {
+    let alive = true;
+    api
+      .listCalls(job.job_id, false)
+      .then((existing) => {
+        if (alive && existing && existing.length > 0) setStarted(true);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [job.job_id]);
+
   function addDemoPersona(style: NegotiationStyle, label: string) {
     if (draftTargets.some((t) => t.negotiation_style_label === style)) return;
     setDraftTargets((prev) => [...prev, { company_name: `${label} (demo)`, negotiation_style_label: style }]);
@@ -153,6 +171,8 @@ export function CallsStage({
   if (!health) {
     return <Skeleton className="h-64 w-full" />;
   }
+
+  const reduce = useReducedMotion();
 
   return (
     <div className="space-y-6">
@@ -279,8 +299,15 @@ export function CallsStage({
             <p className="text-xs text-status-live">Having trouble refreshing call status — will keep retrying automatically.</p>
           )}
           <div className="grid gap-3 sm:grid-cols-2">
-            {(calls ?? []).map((call) => (
-              <CallCard key={call.call_id} call={call} quote={quotesByCallId.get(call.call_id)} />
+            {(calls ?? []).map((call, i) => (
+              <motion.div
+                key={call.call_id}
+                initial={reduce ? false : { opacity: 0, y: 16, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: Math.min(i * 0.06, 0.3) }}
+              >
+                <CallCard call={call} quote={quotesByCallId.get(call.call_id)} />
+              </motion.div>
             ))}
             {calls == null && Array.from({ length: draftTargets.length || 3 }).map((_, i) => <Skeleton key={i} className="h-40 w-full" />)}
           </div>
@@ -360,9 +387,20 @@ const STATUS_BADGE: Record<CallStatus, { variant: "live" | "done" | "flag" | "pe
 function CallCard({ call, quote }: { call: CallRecord; quote?: Quote }) {
   const badge = STATUS_BADGE[call.status];
   const elapsed = useElapsed(call.started_at, call.ended_at);
+  const reduce = useReducedMotion();
+  const live = call.status === "in_progress" || call.status === "dialing";
 
   return (
-    <Card>
+    <div className="relative h-full">
+      {live && !reduce && (
+        <motion.div
+          aria-hidden="true"
+          className="pointer-events-none absolute -inset-0.5 rounded-xl bg-status-live/25 blur-md"
+          animate={{ opacity: [0.25, 0.65, 0.25] }}
+          transition={{ duration: 1.9, repeat: Infinity, ease: "easeInOut" }}
+        />
+      )}
+      <Card className={cn("relative h-full", live && "border-status-live/40")}>
       <CardContent className="space-y-3 p-4">
         <div className="flex items-start justify-between gap-2">
           <div>
@@ -472,7 +510,8 @@ function CallCard({ call, quote }: { call: CallRecord; quote?: Quote }) {
           </div>
         )}
       </CardContent>
-    </Card>
+      </Card>
+    </div>
   );
 }
 

@@ -47,6 +47,10 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Pin the workspace root to this app. A stray lockfile in a parent dir
+  // (e.g. ~/package-lock.json) otherwise makes Next infer the wrong root,
+  // which corrupts dev HMR/caching (phantom "parse error" overlays).
+  turbopack: { root: __dirname },
   // Effects run once (like production). Avoids three.js re-initialising the
   // WebGL background on React's dev-only double-mount; lint rules still enforce
   // render purity, so nothing is lost.
