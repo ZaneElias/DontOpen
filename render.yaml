@@ -40,6 +40,21 @@ services:
         sync: false
       - key: WEBHOOK_BASE_URL
         sync: false
+      # Supabase auth. Without SUPABASE_JWKS_URL the backend cannot verify
+      # tokens, so every authenticated route returns 503 and the app loads
+      # forever with empty skeletons. These two are plain public URLs.
+      - key: SUPABASE_URL
+        value: https://fshbdeydbotglbalgnhy.supabase.co
+      - key: SUPABASE_JWKS_URL
+        value: https://fshbdeydbotglbalgnhy.supabase.co/auth/v1/.well-known/jwks.json
+      # The anon key is public by design (it already ships to every browser);
+      # access is enforced by Row Level Security, not by hiding it. Needed here
+      # so the backend can persist jobs/quotes as the signed-in user.
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      # Global monthly spend ceiling. 0 or unset disables the cap.
+      - key: MONTHLY_BUDGET_USD
+        value: "25"
       # CORS: set to your Vercel frontend origin in production.
       - key: CORS_ALLOW_ORIGINS
         value: "*"

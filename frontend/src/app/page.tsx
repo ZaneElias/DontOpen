@@ -33,6 +33,8 @@ export default function Page() {
   const [sessionExpired, setSessionExpired] = useState(false);
   // Set when the backend reports the account is out of free comparisons (402).
   const [usageExhausted, setUsageExhausted] = useState(false);
+  // Why job creation failed, if it did. Prevents an endless skeleton screen.
+  const [startError, setStartError] = useState<string | null>(null);
   const [initializing, setInitializing] = useState(true);
   // `session` here is the sessionStorage helper; auth state comes from Supabase.
   const { user, loading: authLoading, signOut, profile, profileLoading } = useAuth();
@@ -64,6 +66,7 @@ export default function Page() {
     setInitializing(true);
     try {
       setUsageExhausted(false);
+      setStartError(null);
       const newJob = await api.createIntake(chosen);
       session.setJobId(newJob.job_id);
       session.setStage("brief");
@@ -72,11 +75,19 @@ export default function Page() {
       setFurthestReached("brief");
     } catch (err) {
       // 402 means the account has spent all its free comparisons - a real
-      // product state, not a connectivity failure, so surface it as its own screen.
+      // product state, not a connectivity failure, so it gets its own screen.
       if (err instanceof ApiError && err.status === 402) {
         setUsageExhausted(true);
+      } else {
+        // Anything else previously fell through silently and left the stage
+        // showing empty skeletons forever, which looks like a hang rather than
+        // a failure. Surface it instead.
+        setStartError(
+          err instanceof ApiError
+            ? err.message
+            : "Couldn't reach the CallPilot backend. It may still be starting up."
+        );
       }
-      // anything else: the health panel surfaces the connectivity problem
     } finally {
       setInitializing(false);
     }
@@ -228,6 +239,33 @@ export default function Page() {
         freeUsesRemaining={profile?.free_uses_remaining ?? 0}
       >
         <UsageExhausted />
+      </AppShell>
+    );
+  }
+
+  if (startError && !job) {
+    return (
+      <AppShell
+        stage="brief"
+        furthestReached="brief"
+        onNavigate={() => {}}
+        health={health}
+        user={user ? { name: user.user_metadata?.full_name ?? null, email: user.email ?? null, image: user.user_metadata?.avatar_url ?? null } : null}
+        onSignOut={handleSignOut}
+        freeUsesRemaining={profile?.free_uses_remaining ?? null}
+      >
+        <Alert variant="warning">
+          <AlertTitle>Couldn&apos;t start a new job</AlertTitle>
+          <AlertDescription className="space-y-3">
+            <p>{startError}</p>
+            <p className="text-xs">
+              If this persists, the backend may be missing its Supabase configuration, or still waking up.
+            </p>
+            <Button size="sm" onClick={() => startFresh()}>
+              <RotateCcw className="size-3.5" /> Try again
+            </Button>
+          </AlertDescription>
+        </Alert>
       </AppShell>
     );
   }
