@@ -60,7 +60,11 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     const backendUrl = process.env.BACKEND_URL || "http://127.0.0.1:8000";
-    return [{ source: "/api/:path*", destination: `${backendUrl}/:path*` }];
+    // Everything under /api/* proxies to FastAPI EXCEPT /api/auth/*, which must
+    // stay in Next for Auth.js (sign-in, callback, session). Without the
+    // negative lookahead, Google's callback would be forwarded to Python and
+    // sign-in would fail with a confusing 404.
+    return [{ source: "/api/:path((?!auth).*)", destination: `${backendUrl}/:path` }];
   },
 };
 
