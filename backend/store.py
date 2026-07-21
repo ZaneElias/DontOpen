@@ -130,6 +130,39 @@ def consume_free_use(access_token: str) -> bool:
     return bool(res.data)
 
 
+# ── webhook writes (no user session) ───────────────────────────────────────
+# Telephony webhooks arrive with no JWT, so they can't satisfy RLS directly.
+# These go through security-definer functions that resolve the owner from the
+# job itself — a webhook can only write into an existing job, as its real owner.
+
+def _anon_client() -> Client:
+    if not store_configured():
+        raise RuntimeError("Supabase store is not configured")
+    return create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+
+def webhook_record_call(call: CallRecord) -> bool:
+    res = _anon_client().rpc("webhook_record_call", {
+        "p_job_id": call.job_id,
+        "p_call_id": call.call_id,
+        "p_status": call.status.value if hasattr(call.status, "value") else str(call.status),
+        "p_payload": call.model_dump(mode="json"),
+    }).execute()
+    return bool(res.data)
+
+
+def webhook_record_quote(quote: Quote) -> bool:
+    res = _anon_client().rpc("webhook_record_quote", {
+        "p_job_id": quote.job_id,
+        "p_quote_id": quote.quote_id,
+        "p_call_id": quote.call_id,
+        "p_company": quote.company_name,
+        "p_total": quote.total_price,
+        "p_payload": quote.model_dump(mode="json"),
+    }).execute()
+    return bool(res.data)
+
+
 def get_profile(access_token: str) -> Optional[Dict[str, Any]]:
     res = client_for(access_token).table("profiles").select("*").limit(1).execute()
     rows = res.data or []

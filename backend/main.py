@@ -442,6 +442,7 @@ def create_intake(body: IntakeCreateRequest, request: Request) -> JobSpec:
     QUOTES[job.job_id] = []
 
     if persistent:
+        _remember_owner(job.job_id, request)
         try:
             store.save_job(token, user_id, job)
         except Exception as exc:
@@ -886,6 +887,7 @@ async def _apply_first_pass_quote(job_id: str, call: CallRecord, params: Dict[st
     async with _STATE_LOCK:
         QUOTES[job_id].append(quote)
         call.quote_id = quote.quote_id
+    _persist_quote(job_id, quote)
     return quote
 
 
@@ -1041,6 +1043,51 @@ class SimulateCallsRequest(BaseModel):
 _BG_TASKS: set = set()
 
 
+# Owner context captured from the authenticated request that kicked off the
+# work. Simulations run as fire-and-forget background tasks with no request
+# scope, so without this they'd have no JWT to write as and RLS would
+# (correctly) reject them. Access tokens comfortably outlive a ~60s run.
+_JOB_OWNER: Dict[str, tuple] = {}
+
+
+def _remember_owner(job_id: str, request: Request) -> None:
+    user_id = getattr(request.state, "user_id", None)
+    token = getattr(request.state, "access_token", None)
+    if user_id and token:
+        _JOB_OWNER[job_id] = (user_id, token)
+
+
+def _persist_call(job_id: str, record: CallRecord) -> None:
+    """Best-effort write-through. Never raises — losing a row must not fail a run."""
+    if not store.store_configured():
+        return
+    owner = _JOB_OWNER.get(job_id)
+    try:
+        if owner:
+            user_id, token = owner
+            store.save_call(token, user_id, record)
+        else:
+            store.webhook_record_call(record)
+    except Exception as exc:
+        logger.warning("could not persist call %s: %s", record.call_id, exc)
+
+
+def _persist_quote(job_id: str, quote: Quote) -> None:
+    if not store.store_configured():
+        return
+    owner = _JOB_OWNER.get(job_id)
+    try:
+        if owner:
+            user_id, token = owner
+            store.save_quote(token, user_id, quote)
+        else:
+            # No captured session (telephony webhook): fall back to the
+            # security-definer path, which resolves the owner from the job.
+            store.webhook_record_quote(quote)
+    except Exception as exc:
+        logger.warning("could not persist quote %s: %s", quote.quote_id, exc)
+
+
 def _spawn_bg(coro) -> None:
     """Fire-and-forget a coroutine, holding a reference so it isn't GC'd."""
     task = asyncio.create_task(coro)
@@ -1092,6 +1139,10 @@ async def _run_one_simulation(*, job_id: str, record: CallRecord, persona: Dict[
     except Exception as exc:  # a background task must never fail silently
         record.status = CallStatus.FAILED
         record.error = f"unexpected error: {exc}"
+    finally:
+        # Persist the terminal state either way, so a failed call is still
+        # visible to its owner after a restart.
+        _persist_call(job_id, record)
 
 
 async def _run_one_negotiation(*, job_id: str, record: CallRecord, caller_agent_id: str,
@@ -1121,10 +1172,12 @@ async def _run_one_negotiation(*, job_id: str, record: CallRecord, caller_agent_
     except Exception as exc:
         record.status = CallStatus.FAILED
         record.error = f"unexpected error: {exc}"
+    finally:
+        _persist_call(job_id, record)
 
 
 @app.post("/calls/{job_id}/simulate")
-async def simulate_calls(job_id: str, body: SimulateCallsRequest) -> List[CallRecord]:
+async def simulate_calls(job_id: str, body: SimulateCallsRequest, request: Request) -> List[CallRecord]:
     """
     Run the real Caller agent against each counterparty persona via ElevenLabs'
     agent simulation — a genuine, unscripted agent-to-agent negotiation. The
@@ -1138,6 +1191,9 @@ async def simulate_calls(job_id: str, body: SimulateCallsRequest) -> List[CallRe
             detail={"error": "job_not_confirmed", "message": "Confirm the job spec before placing calls."},
         )
     _enforce_budget()
+    # Background simulations have no request scope; capture the caller's context
+    # now so they can still persist as this user.
+    _remember_owner(job_id, request)
     try:
         config.require_simulation_config()
     except RuntimeError as exc:
