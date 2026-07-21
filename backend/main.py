@@ -208,7 +208,15 @@ async def enforce_supabase_auth(request: Request, call_next):
     if not auth.auth_configured():
         return JSONResponse(
             status_code=503,
-            content={"detail": {"error": "auth_not_configured", "message": "Supabase auth is not configured on the server."}},
+            content={
+                "detail": {
+                    "error": "auth_not_configured",
+                    "message": (
+                        "The server is missing its Supabase configuration. Set SUPABASE_URL "
+                        "in the backend environment (Render → Environment) and redeploy."
+                    ),
+                }
+            },
         )
     try:
         user_id, token = auth.credentials_from_header(request.headers.get("authorization"))
@@ -381,6 +389,10 @@ def health() -> Dict[str, Any]:
     """Non-secret config status. The frontend's blocking setup panel reads this."""
     status = config.config_status()
     status["jobs_in_memory"] = len(JOBS)
+    # Surfaced so a half-configured deploy is visible from /health rather than
+    # only showing up as a 503 the moment someone tries to start a job.
+    status["auth_configured"] = auth.auth_configured()
+    status["store_configured"] = store.store_configured()
     # Surfaced so the UI can warn before the ceiling is hit rather than after.
     status["budget"] = budget.status()
     return status

@@ -21,7 +21,20 @@ from jwt import PyJWKClient
 
 logger = logging.getLogger("callpilot.auth")
 
-SUPABASE_JWKS_URL = os.environ.get("SUPABASE_JWKS_URL", "")
+def _resolve_jwks_url() -> str:
+    """JWKS endpoint, derived from SUPABASE_URL when not given explicitly.
+
+    Two env vars for one fact is an easy way to half-configure a deploy and get
+    a confusing 503, so SUPABASE_URL alone is enough.
+    """
+    explicit = os.environ.get("SUPABASE_JWKS_URL", "").strip()
+    if explicit:
+        return explicit
+    base = os.environ.get("SUPABASE_URL", "").strip().rstrip("/")
+    return f"{base}/auth/v1/.well-known/jwks.json" if base else ""
+
+
+SUPABASE_JWKS_URL = _resolve_jwks_url()
 # Supabase mints access tokens with this audience for signed-in users.
 _EXPECTED_AUDIENCE = "authenticated"
 _ALGORITHMS = ["ES256", "RS256"]
