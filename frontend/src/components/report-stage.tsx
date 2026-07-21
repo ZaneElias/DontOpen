@@ -379,9 +379,7 @@ function EvidenceDialog({ rq, trigger }: { rq: RankedQuote; trigger: React.React
         </div>
         {rq.call.recording_url && (
           <div className="space-y-1">
-            <audio controls preload="none" src={rq.call.recording_url} className="w-full">
-              Your browser does not support audio playback.
-            </audio>
+            <AuthedAudio src={rq.call.recording_url} className="w-full" />
             {rq.call.mode === "simulation" && (
               <p className="text-[11px] text-ink-muted">AI-voiced replay of this call&apos;s actual transcript.</p>
             )}

@@ -36,7 +36,7 @@ export function AppShell({
             "Simulation ready" to wrap onto two lines. Widening the bar and
             pinning labels to a single line gives each group real breathing
             room instead of stacking them. */}
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <div className="flex shrink-0 items-center gap-2">
             <div className="flex size-7 items-center justify-center rounded-md bg-action text-action-foreground">
               <PhoneCall className="size-4" />
@@ -48,7 +48,7 @@ export function AppShell({
             <StageProgress current={stage} furthestReached={furthestReached} onNavigate={onNavigate} />
           </div>
 
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1.5">
             <UsageChip remaining={freeUsesRemaining} />
             <span className="hidden sm:inline-flex">
               <ConfigPill health={health} />
@@ -156,7 +156,7 @@ function UsageChip({ remaining }: { remaining?: number | null }) {
   return (
     <span
       title={`${remaining} free comparison${remaining === 1 ? "" : "s"} left on this account`}
-      className={cn("whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium", tone)}
+      className={cn("whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-medium", tone)}
     >
       {remaining > 0 ? `${remaining} left` : "No runs left"}
     </span>
@@ -208,7 +208,7 @@ function ConfigPill({ health }: { health: HealthStatus | null }) {
   return (
     <div
       className={cn(
-        "flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium",
+        "flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-medium",
         ready ? "border-status-done/30 bg-status-done-bg text-status-done" : "border-status-live/30 bg-status-live-bg text-status-live"
       )}
       title={ready ? `All required ${health.call_mode} configuration is present.` : `${health.missing_required_count} required setting(s) missing.`}
