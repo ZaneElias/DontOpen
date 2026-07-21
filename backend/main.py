@@ -34,6 +34,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 import auth
+import budget
 import config
 import store
 from schema import (
@@ -325,6 +326,22 @@ _IMAGE_MAGIC_OK = (
 )
 
 
+def _enforce_budget() -> None:
+    """Block work that costs money once the monthly ceiling is reached.
+
+    Fails with an explicit, human message rather than letting provider calls
+    error out somewhere deeper and look like a bug.
+    """
+    if budget.exhausted():
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "beta_budget_reached",
+                "message": "The beta budget for this month has been reached, so new calls are paused. Back soon — nothing you've already run is affected.",
+            },
+        )
+
+
 def _job_or_404(job_id: str) -> JobSpec:
     job = JOBS.get(job_id)
     if job is None:
@@ -364,6 +381,8 @@ def health() -> Dict[str, Any]:
     """Non-secret config status. The frontend's blocking setup panel reads this."""
     status = config.config_status()
     status["jobs_in_memory"] = len(JOBS)
+    # Surfaced so the UI can warn before the ceiling is hit rather than after.
+    status["budget"] = budget.status()
     return status
 
 
@@ -668,6 +687,7 @@ async def start_calls(job_id: str, body: CallStartRequest) -> List[CallRecord]:
             status_code=409,
             detail={"error": "job_not_confirmed", "message": "Confirm the job spec before placing calls."},
         )
+    _enforce_budget()
     if len(body.targets) < 3:
         raise HTTPException(
             status_code=422,
@@ -1117,6 +1137,7 @@ async def simulate_calls(job_id: str, body: SimulateCallsRequest) -> List[CallRe
             status_code=409,
             detail={"error": "job_not_confirmed", "message": "Confirm the job spec before placing calls."},
         )
+    _enforce_budget()
     try:
         config.require_simulation_config()
     except RuntimeError as exc:
@@ -1168,6 +1189,9 @@ async def simulate_calls(job_id: str, body: SimulateCallsRequest) -> List[CallRe
             caller_agent_id=caller_agent_id, call_context=call_context,
             new_turns_limit=body.new_turns_limit,
         ))
+    # Charged at dispatch rather than completion: over-counting a failed run is
+    # the safe direction for a spend ceiling.
+    budget.record(len(to_run) * budget.COST_PER_SIMULATED_CALL)
     return records
 
 
