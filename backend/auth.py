@@ -68,10 +68,20 @@ def verify_token(token: str) -> dict:
 
 def user_id_from_header(authorization: Optional[str]) -> str:
     """Extract and verify a bearer token, returning the Supabase user id (sub)."""
+    return credentials_from_header(authorization)[0]
+
+
+def credentials_from_header(authorization: Optional[str]) -> tuple[str, str]:
+    """Verify the bearer token; return (user_id, raw_token).
+
+    The raw token is passed to the Supabase store so queries run AS the user and
+    RLS enforces ownership in the database rather than in application code.
+    """
     if not authorization or not authorization.lower().startswith("bearer "):
         raise AuthError("missing bearer token")
-    claims = verify_token(authorization[7:].strip())
+    token = authorization[7:].strip()
+    claims = verify_token(token)
     sub = claims.get("sub")
     if not sub:
         raise AuthError("token has no subject")
-    return sub
+    return sub, token

@@ -35,6 +35,7 @@ from pydantic import BaseModel, Field
 
 import auth
 import config
+import store
 from schema import (
     CallOutcome,
     CallRecord,
@@ -209,7 +210,9 @@ async def enforce_supabase_auth(request: Request, call_next):
             content={"detail": {"error": "auth_not_configured", "message": "Supabase auth is not configured on the server."}},
         )
     try:
-        request.state.user_id = auth.user_id_from_header(request.headers.get("authorization"))
+        user_id, token = auth.credentials_from_header(request.headers.get("authorization"))
+        request.state.user_id = user_id
+        request.state.access_token = token
     except auth.AuthError as exc:
         logger.info("rejected unauthenticated %s %s: %s", request.method, request.url.path, exc)
         return JSONResponse(
@@ -387,20 +390,63 @@ class IntakeCreateRequest(BaseModel):
 
 
 @app.post("/intake")
-def create_intake(body: IntakeCreateRequest) -> JobSpec:
+def create_intake(body: IntakeCreateRequest, request: Request) -> JobSpec:
     try:
         vconfig = config.load_vertical_config(body.vertical)
     except config.VerticalConfigError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    user_id = getattr(request.state, "user_id", None)
+    token = getattr(request.state, "access_token", None)
+    persistent = store.store_configured() and bool(token and user_id)
+
+    # Usage limit is spent per NEW JOB, not per API call, and is decremented
+    # atomically in Postgres so two concurrent creates can't both take the last one.
+    if persistent:
+        try:
+            allowed = store.consume_free_use(token)
+        except Exception as exc:  # never let a metering hiccup hard-fail intake
+            logger.warning("free-use check failed, allowing: %s", exc)
+            allowed = True
+        if not allowed:
+            raise HTTPException(
+                status_code=402,
+                detail={
+                    "error": "free_uses_exhausted",
+                    "message": "You've used all your free comparisons on this account.",
+                },
+            )
+
     job = JobSpec(vertical=vconfig["vertical"])
     JOBS[job.job_id] = job
     CALLS[job.job_id] = []
     QUOTES[job.job_id] = []
+
+    if persistent:
+        try:
+            store.save_job(token, user_id, job)
+        except Exception as exc:
+            # Transitional: the in-memory copy still serves this request so a
+            # storage blip doesn't break the flow, but it is logged loudly
+            # because an unpersisted job is invisible to the owner later.
+            logger.warning("could not persist job %s: %s", job.job_id, exc)
     return job
 
 
 @app.get("/intake/{job_id}")
-def get_intake(job_id: str) -> JobSpec:
+def get_intake(job_id: str, request: Request) -> JobSpec:
+    token = getattr(request.state, "access_token", None)
+    if store.store_configured() and token:
+        # Ownership is decided by Postgres RLS, not by us: a job belonging to
+        # someone else simply doesn't come back.
+        try:
+            owned = store.get_job(token, job_id)
+        except Exception as exc:
+            logger.warning("ownership lookup failed for %s: %s", job_id, exc)
+            owned = None
+        if owned is not None:
+            JOBS.setdefault(job_id, owned)
+            return owned
     return _job_or_404(job_id)
 
 
