@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { PhoneCall, ShieldCheck, AlertTriangle, RotateCcw } from "lucide-react";
+import { PhoneCall, ShieldCheck, AlertTriangle, RotateCcw, LogOut, UserRound } from "lucide-react";
 import { StageProgress } from "@/components/stage-progress";
 import { ThemeToggle } from "@/components/theme-toggle";
 import type { HealthStatus, Stage } from "@/lib/types";
@@ -13,6 +13,8 @@ export function AppShell({
   onNavigate,
   health,
   onNewJob,
+  user,
+  onSignOut,
   children,
 }: {
   stage: Stage;
@@ -20,6 +22,8 @@ export function AppShell({
   onNavigate: (stage: Stage) => void;
   health: HealthStatus | null;
   onNewJob?: () => void;
+  user?: { name?: string | null; email?: string | null; image?: string | null } | null;
+  onSignOut?: () => void;
   children: React.ReactNode;
 }) {
   return (
@@ -36,7 +40,7 @@ export function AppShell({
             <div className="flex items-center gap-2 sm:hidden">
               <NewJobButton onNewJob={onNewJob} />
               <ThemeToggle />
-              <ConfigPill health={health} />
+              <AccountChip user={user} onSignOut={onSignOut} />
             </div>
           </div>
           <div className="flex items-center justify-between gap-4 sm:justify-end">
@@ -45,6 +49,7 @@ export function AppShell({
               <NewJobButton onNewJob={onNewJob} />
               <ThemeToggle />
               <ConfigPill health={health} />
+              <AccountChip user={user} onSignOut={onSignOut} />
             </div>
           </div>
         </div>
@@ -72,6 +77,44 @@ export function AppShell({
           </motion.div>
         </AnimatePresence>
       </main>
+    </div>
+  );
+}
+
+/**
+ * Shows the *actual* auth state — the signed-in Google identity, or "Guest" —
+ * with a working sign-out that returns to the login screen.
+ */
+function AccountChip({
+  user,
+  onSignOut,
+}: {
+  user?: { name?: string | null; email?: string | null; image?: string | null } | null;
+  onSignOut?: () => void;
+}) {
+  if (!onSignOut) return null;
+  const label = user?.name?.split(" ")[0] ?? (user?.email ? user.email.split("@")[0] : "Guest");
+  return (
+    <div className="flex items-center gap-1.5 rounded-full border border-line py-0.5 pl-0.5 pr-0.5">
+      <span className="flex items-center gap-1.5 pl-1.5">
+        {user?.image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={user.image} alt="" className="size-5 rounded-full" referrerPolicy="no-referrer" />
+        ) : (
+          <span className="flex size-5 items-center justify-center rounded-full bg-ink/10">
+            <UserRound className="size-3 text-ink-muted" />
+          </span>
+        )}
+        <span className="max-w-24 truncate text-xs font-medium text-ink">{label}</span>
+      </span>
+      <button
+        onClick={onSignOut}
+        title={user ? "Sign out" : "Leave demo"}
+        aria-label={user ? "Sign out" : "Leave demo"}
+        className="flex size-6 cursor-pointer items-center justify-center rounded-full text-ink-muted cp-transition hover:bg-ink/10 hover:text-ink"
+      >
+        <LogOut className="size-3.5" />
+      </button>
     </div>
   );
 }

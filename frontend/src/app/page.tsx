@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { RotateCcw } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { BriefStage, BriefStageSkeleton } from "@/components/brief-stage";
@@ -99,6 +99,20 @@ export default function Page() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /**
+   * Real sign-out for both entry paths: a Google session is cleared via
+   * Auth.js, and the guest gate is reset. Also wipes the job session and
+   * provisions a fresh one so re-entering doesn't land on a dead job.
+   */
+  async function handleSignOut() {
+    session.clear();
+    setEntered(false);
+    if (authSession) {
+      await signOut({ redirect: false });
+    }
+    void startFresh();
+  }
+
   function goToStage(next: Stage) {
     setStage(next);
     session.setStage(next);
@@ -148,7 +162,15 @@ export default function Page() {
   }
 
   return (
-    <AppShell stage={stage} furthestReached={furthestReached} onNavigate={goToStage} health={health} onNewJob={() => startFresh()}>
+    <AppShell
+      stage={stage}
+      furthestReached={furthestReached}
+      onNavigate={goToStage}
+      health={health}
+      onNewJob={() => startFresh()}
+      user={authSession?.user ?? null}
+      onSignOut={handleSignOut}
+    >
       {stage === "brief" && (
         <BriefStage
           job={job}
