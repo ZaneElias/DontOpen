@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { VoiceIntakeWidget } from "@/components/voice-intake-widget";
 import { Hero } from "@/components/hero";
 import { GenericIntakeForm } from "@/components/generic-intake-form";
+import { SectionHeader } from "@/components/ui/section";
 import { api, ApiError } from "@/lib/api-client";
 import type { HealthStatus, JobSpec } from "@/lib/types";
 
@@ -161,17 +162,13 @@ export function BriefStage({
   return (
     <div className="space-y-6">
       <Hero />
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="font-serif text-2xl font-semibold text-ink">
-            {isMoving ? "Tell us about your move" : `Tell us about your ${job.vertical.replace(/_/g, " ")} job`}
-          </h1>
-          <p className="mt-1 text-sm text-ink-muted">
-            This becomes the exact job spec every business hears — the same details, in the same words, every call.
-          </p>
-        </div>
-        <VerticalPicker current={job.vertical} onSwitch={onSwitchVertical} />
-      </div>
+      <SectionHeader
+        eyebrow="Step 01 · Your brief"
+        title={isMoving ? "Tell us about your" : `Tell us about your ${job.vertical.replace(/_/g, " ")}`}
+        accent={isMoving ? "move" : "job"}
+        subtitle="This becomes the exact job spec every business hears — the same details, in the same words, every call."
+        right={<VerticalPicker current={job.vertical} onSwitch={onSwitchVertical} />}
+      />
 
       {isMoving && (
         <Card>

@@ -27,8 +27,10 @@
 
   --radius: 0.625rem;
 
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-serif: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  /* Editorial accent for a single italic word inside a headline. */
+  --font-editorial: var(--font-instrument), "Instrument Serif", Georgia, serif;
 }
 
 /* ── Dark theme (cinematic) ────────────────────────────────────────────
@@ -104,6 +106,111 @@ body {
 
 body {
   background: transparent;
+}
+
+/* ── Liquid glass ──────────────────────────────────────────────────────
+   Frosted panel with a specular hairline border (masked so only the 1.4px
+   edge paints). IMPORTANT: any entrance animation on an ancestor must use
+   `animation-fill-mode: backwards` — `forwards`/`both` leave a transform on
+   the element, which silently disables backdrop-filter on its children (the
+   same containing-block trap that breaks position:fixed). */
+.liquid-glass {
+  position: relative;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--paper-raised) 58%, transparent);
+  /* NOTE: the blur itself is applied via Tailwind's `backdrop-blur-*` utility on
+     the element, not here — Lightning CSS strips a hand-written
+     `backdrop-filter` from this rule. Always pair: `liquid-glass backdrop-blur-xl`. */
+  border: none;
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.1),
+    0 18px 50px -26px rgba(0, 0, 0, 0.55);
+}
+.liquid-glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.4px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.45) 0%,
+    rgba(255, 255, 255, 0.14) 20%,
+    rgba(255, 255, 255, 0) 40%,
+    rgba(255, 255, 255, 0) 60%,
+    rgba(255, 255, 255, 0.14) 80%,
+    rgba(255, 255, 255, 0.45) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+/* Light mode needs a dark hairline instead of a white specular one. */
+:root:not([data-theme="dark"]) .liquid-glass::before {
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.12) 0%,
+    rgba(0, 0, 0, 0.05) 20%,
+    rgba(0, 0, 0, 0) 40%,
+    rgba(0, 0, 0, 0) 60%,
+    rgba(0, 0, 0, 0.05) 80%,
+    rgba(0, 0, 0, 0.12) 100%
+  );
+}
+
+/* ── Entrance choreography ─────────────────────────────────────────────
+   `backwards` only — see the note above; this is why glass children keep
+   their blur after the animation finishes. */
+@keyframes cp-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-fade-up {
+  animation: cp-fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+.delay-1 { animation-delay: 0.08s; }
+.delay-2 { animation-delay: 0.18s; }
+.delay-3 { animation-delay: 0.3s; }
+.delay-4 { animation-delay: 0.44s; }
+.delay-5 { animation-delay: 0.6s; }
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up {
+    animation: none;
+  }
+}
+
+/* ── Editorial type ────────────────────────────────────────────────────*/
+.font-editorial {
+  font-family: var(--font-editorial);
+}
+/* Gradient eyebrow label above section headings. */
+.cp-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  background: linear-gradient(90deg, #f5c344, #f28482, #b567c2);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+/* Tight, modern headline tracking (fintech feel). */
+.cp-display {
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+  font-weight: 500;
 }
 
 /* Animated rainbow background (rainbow-shader.tsx). The shader canvas renders a

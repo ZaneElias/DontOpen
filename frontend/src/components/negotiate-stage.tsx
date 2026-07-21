@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SetupPanel } from "@/components/setup-panel";
+import { SectionHeader } from "@/components/ui/section";
 import { api, ApiError } from "@/lib/api-client";
 import { usePolling } from "@/hooks/use-polling";
 import { cn } from "@/lib/utils";
@@ -114,12 +115,12 @@ export function NegotiateStage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-serif text-2xl font-semibold text-ink">Negotiate with leverage</h1>
-        <p className="mt-1 text-sm text-ink-muted">
-          We call back the other companies and cite your best real quote — never a number that wasn&apos;t actually gathered.
-        </p>
-      </div>
+      <SectionHeader
+        eyebrow="Step 03 · Real leverage"
+        title="Negotiate with"
+        accent="leverage"
+        subtitle="We call back the other companies and cite your best real quote — never a number that wasn't actually gathered."
+      />
 
       {!health?.ready_for_calls && health && <SetupPanel health={health} />}
 

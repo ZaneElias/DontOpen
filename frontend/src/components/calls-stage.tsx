@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SetupPanel } from "@/components/setup-panel";
+import { SectionHeader } from "@/components/ui/section";
 import { api, ApiError } from "@/lib/api-client";
 import { usePolling } from "@/hooks/use-polling";
 import { cn } from "@/lib/utils";
@@ -177,10 +178,12 @@ export function CallsStage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-serif text-2xl font-semibold text-ink">Gather quotes</h1>
-        <p className="mt-1 text-sm text-ink-muted">
-          Every call describes your job identically — same spec, every time — so the quotes are actually comparable.
-        </p>
+        <SectionHeader
+          eyebrow="Step 02 · Market sweep"
+          title="Gather"
+          accent="quotes"
+          subtitle="Every call describes your job identically — same spec, every time — so the quotes are actually comparable."
+        />
       </div>
 
       <div className="flex items-center gap-2 rounded-md border border-line bg-paper-raised px-3 py-2 text-xs text-ink-muted">

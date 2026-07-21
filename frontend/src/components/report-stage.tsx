@@ -12,6 +12,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { api, ApiError } from "@/lib/api-client";
 import { AnimatedNumber } from "@/components/ui/animated-number";
+import { SectionHeader } from "@/components/ui/section";
 import { cn } from "@/lib/utils";
 import type { JobSpec, Quote, RankedQuote, Report } from "@/lib/types";
 
@@ -76,22 +77,22 @@ export function ReportStage({ job }: { job: JobSpec }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="font-serif text-2xl font-semibold text-ink">Your ranked comparison</h1>
-          <p className="mt-1 text-sm text-ink-muted">
-            Generated from {report.ranked_quotes.length} usable quote(s) — click any price to see its transcript evidence.
-          </p>
-        </div>
-        <div className="flex gap-2 print:hidden">
+      <SectionHeader
+        eyebrow="Step 04 · The verdict"
+        title="Your ranked"
+        accent="comparison"
+        subtitle={`Generated from ${report.ranked_quotes.length} usable quote(s) — click any price to see its transcript evidence.`}
+        right={
+          <div className="flex gap-2 print:hidden">
           <Button size="sm" variant="outline" onClick={load}>
             <RefreshCw className="size-3.5" /> Refresh
           </Button>
           <Button size="sm" onClick={() => window.print()}>
             <Download className="size-3.5" /> Save as PDF
           </Button>
-        </div>
-      </div>
+          </div>
+        }
+      />
 
       <AiDisclosureBanner />
 
