@@ -15,6 +15,7 @@ import { getAccessToken } from "@/lib/supabase";
 export function AuthedAudio({ src, className }: { src: string; className?: string }) {
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [state, setState] = useState<"idle" | "loading" | "error">("idle");
+  const [message, setMessage] = useState<string | null>(null);
   const urlRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -33,13 +34,28 @@ export function AuthedAudio({ src, className }: { src: string; className?: strin
       const res = await fetch(src, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-      if (!res.ok) throw new Error(String(res.status));
+      if (!res.ok) {
+        // Surface the backend's actual reason (e.g. TTS key missing) rather
+        // than a generic failure.
+        let reason = `Request failed (${res.status})`;
+        try {
+          const body = await res.json();
+          reason = body?.detail?.message ?? reason;
+        } catch {
+          /* non-JSON error body */
+        }
+        throw new Error(reason);
+      }
       const blob = await res.blob();
+      // A zero-byte body is served as a valid 200 and renders as a dead
+      // 0:00 / 0:00 player, which looks broken with no explanation.
+      if (blob.size === 0) throw new Error("The server returned no audio for this transcript.");
       const url = URL.createObjectURL(blob);
       urlRef.current = url;
       setObjectUrl(url);
       setState("idle");
-    } catch {
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : null);
       setState("error");
     }
   }
@@ -60,7 +76,9 @@ export function AuthedAudio({ src, className }: { src: string; className?: strin
         {state === "loading" ? "Generating audio…" : "Play"}
       </button>
       {state === "error" ? (
-        <p className="mt-1.5 text-[11px] text-status-flag">Couldn&apos;t load the audio. Try again in a moment.</p>
+        <p className="mt-1.5 text-[11px] text-status-flag">
+          {message ?? "Couldn't load the audio. Try again in a moment."}
+        </p>
       ) : null}
     </div>
   );

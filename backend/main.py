@@ -1024,6 +1024,15 @@ async def call_audio_replay(job_id: str, call_id: str):
             raise HTTPException(status_code=502, detail={"error": "tts_failed", "message": str(exc)}) from exc
         AUDIO_CACHE[call_id] = audio
 
+    # Empty bytes would be served as a valid 200 and render as a dead 0:00/0:00
+    # player. Fail explicitly instead so the UI can say what went wrong.
+    if not audio:
+        AUDIO_CACHE.pop(call_id, None)
+        raise HTTPException(
+            status_code=502,
+            detail={"error": "tts_empty", "message": "Voice synthesis returned no audio. Check the ElevenLabs API key on the backend."},
+        )
+
     from fastapi.responses import Response
     return Response(content=audio, media_type="audio/mpeg",
                     headers={"Cache-Control": "private, max-age=3600"})
@@ -1688,6 +1697,13 @@ async def report_audio(job_id: str):
         except elevenlabs_client.ElevenLabsClientError as exc:
             raise HTTPException(status_code=502, detail={"error": "tts_failed", "message": str(exc)}) from exc
         AUDIO_CACHE[cache_key] = audio
+
+    if not audio:
+        AUDIO_CACHE.pop(cache_key, None)
+        raise HTTPException(
+            status_code=502,
+            detail={"error": "tts_empty", "message": "Voice synthesis returned no audio. Check the ElevenLabs API key on the backend."},
+        )
 
     from fastapi.responses import Response
     return Response(content=audio, media_type="audio/mpeg", headers={"Cache-Control": "private, max-age=3600"})

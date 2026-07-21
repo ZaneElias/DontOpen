@@ -47,12 +47,17 @@ export function AppShell({
           </div>
           <div className="flex items-center justify-between gap-4 sm:justify-end">
             <StageProgress current={stage} furthestReached={furthestReached} onNavigate={onNavigate} />
-            <div className="hidden items-center gap-2 sm:flex">
+            {/* Status first, then a tight cluster of icon-only utilities, then
+                the account. Keeps the bar from reading as a row of competing
+                pills. */}
+            <div className="hidden items-center gap-2.5 sm:flex">
               <UsageChip remaining={freeUsesRemaining} />
-              <FeedbackLink />
-              <NewJobButton onNewJob={onNewJob} />
-              <ThemeToggle />
               <ConfigPill health={health} />
+              <span className="flex items-center gap-0.5 rounded-full border border-line/70 px-1 py-0.5">
+                <NewJobButton onNewJob={onNewJob} />
+                <FeedbackLink />
+                <ThemeToggle />
+              </span>
               <AccountChip user={user} onSignOut={onSignOut} />
             </div>
           </div>
@@ -167,9 +172,10 @@ function FeedbackLink() {
       href={target}
       {...(isExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
       title="Report an issue with the beta"
-      className="flex items-center gap-1.5 rounded-full border border-line px-2.5 py-1 text-xs font-medium text-ink-muted cp-transition hover:border-line-strong hover:text-ink"
+      aria-label="Report an issue with the beta"
+      className="flex size-7 items-center justify-center rounded-full text-ink-muted cp-transition hover:bg-ink/10 hover:text-ink"
     >
-      <MessageSquareWarning className="size-3.5" /> Report an issue
+      <MessageSquareWarning className="size-3.5" />
     </a>
   );
 }
@@ -180,9 +186,10 @@ function NewJobButton({ onNewJob }: { onNewJob?: () => void }) {
     <button
       onClick={onNewJob}
       title="Start a fresh comparison"
-      className="flex items-center gap-1.5 rounded-full border border-line px-2.5 py-1 text-xs font-medium text-ink-muted cp-transition hover:border-line-strong hover:text-ink"
+      aria-label="Start a fresh comparison"
+      className="flex size-7 items-center justify-center rounded-full text-ink-muted cp-transition hover:bg-ink/10 hover:text-ink"
     >
-      <RotateCcw className="size-3.5" /> New job
+      <RotateCcw className="size-3.5" />
     </button>
   );
 }
@@ -202,7 +209,11 @@ function ConfigPill({ health }: { health: HealthStatus | null }) {
       title={ready ? `All required ${health.call_mode} configuration is present.` : `${health.missing_required_count} required setting(s) missing.`}
     >
       {ready ? <ShieldCheck className="size-3.5" /> : <AlertTriangle className="size-3.5" />}
-      {ready ? readyLabel : `${health.missing_required_count} setting${health.missing_required_count === 1 ? "" : "s"} needed`}
+      {/* Full wording only where there's room; the icon + tooltip carry it otherwise. */}
+      <span className="hidden lg:inline">
+        {ready ? readyLabel : `${health.missing_required_count} setting${health.missing_required_count === 1 ? "" : "s"} needed`}
+      </span>
+      <span className="lg:hidden">{ready ? "Ready" : health.missing_required_count}</span>
     </div>
   );
 }
