@@ -48,20 +48,19 @@ const securityHeaders = [
   { key: "Permissions-Policy", value: "camera=(), geolocation=(), microphone=(self)" },
 ];
 
-// Pin the workspace root to this app. A stray lockfile in a parent dir
-// (e.g. ~/package-lock.json) otherwise makes Next infer the wrong root, which
-// corrupts dev HMR/caching (phantom "parse error" overlays).
+// Pinning the workspace root fixes a LOCAL-ONLY problem: a stray lockfile in a
+// parent directory (e.g. ~/package-lock.json) makes Next infer the wrong root
+// and corrupts dev HMR/caching (phantom "parse error" overlays).
 //
-// Next 16 requires turbopack.root and outputFileTracingRoot to be IDENTICAL —
-// setting only one fails the Vercel build with:
-//   "Both outputFileTracingRoot and turbopack.root are set, but they must have
-//    the same value."
-// Vercel infers outputFileTracingRoot itself, so both are pinned here.
-const projectRoot = __dirname;
+// It must NOT be set on a hosted build. Vercel derives its own roots, and
+// overriding them broke the deploy twice: first the
+// "outputFileTracingRoot and turbopack.root must match" error, then
+// "ENOENT ... /vercel/path0/.next/package.json" once both were pinned.
+// Applying it only in development keeps local dev sane without touching prod.
+const isDev = process.env.NODE_ENV === "development";
 
 const nextConfig: NextConfig = {
-  turbopack: { root: projectRoot },
-  outputFileTracingRoot: projectRoot,
+  ...(isDev ? { turbopack: { root: __dirname } } : {}),
   // Effects run once (like production). Avoids three.js re-initialising the
   // WebGL background on React's dev-only double-mount; lint rules still enforce
   // render purity, so nothing is lost.
