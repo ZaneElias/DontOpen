@@ -34,7 +34,7 @@ export function ConsentGate({
   /** Used instead of sourceUrl when the copy is short enough to live inline. */
   inlineContent?: React.ReactNode;
 }) {
-  const { user, refreshProfile } = useAuth();
+  const { user, refreshProfile, signOut } = useAuth();
   const reduce = useReducedMotion();
   const [markdown, setMarkdown] = useState<string | null>(null);
   const [checked, setChecked] = useState(false);
@@ -77,10 +77,18 @@ export function ConsentGate({
           <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-action/15">
             <ShieldCheck className="size-4 text-action" />
           </span>
-          <div>
+          <div className="min-w-0 flex-1">
             <h1 className="cp-display text-2xl text-ink">{title}</h1>
             <p className="mt-1.5 text-sm leading-relaxed text-ink-muted">{intro}</p>
           </div>
+          {/* Escape hatch: without this, a signed-in user who doesn't want to
+              accept is stuck here with no route back to the login screen. */}
+          <button
+            onClick={() => void signOut()}
+            className="shrink-0 cursor-pointer rounded-full border border-line px-2.5 py-1 text-[11px] font-medium text-ink-muted cp-transition hover:border-line-strong hover:text-ink"
+          >
+            Sign out
+          </button>
         </header>
 
         <div className="max-h-[46vh] overflow-y-auto px-6 py-5">
@@ -98,6 +106,11 @@ export function ConsentGate({
         </div>
 
         <footer className="flex flex-col gap-3 border-t border-line/60 p-6">
+          {user?.email ? (
+            <p className="text-[11px] text-ink-muted">
+              Signed in as <span className="font-medium text-ink">{user.email}</span>
+            </p>
+          ) : null}
           <AnimatedCheckbox checked={checked} onChange={setChecked} label={confirmLabel} />
           {error ? <p className="text-[11px] text-status-flag">{error}</p> : null}
           <motion.button

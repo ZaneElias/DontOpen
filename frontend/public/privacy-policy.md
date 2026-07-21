@@ -1,5 +1,3 @@
-> **⚠️ DRAFT — NOT LEGAL ADVICE.** This document was AI-generated as a starting point and has not been reviewed by an attorney. Do not publish this or rely on it to actually protect you or your users until a lawyer licensed in your operating jurisdiction(s) has reviewed and revised it — particularly the call-recording and AI-disclosure sections, which touch state-specific laws (e.g. California's two-party consent requirement, emerging AI-voice-disclosure statutes) that this draft does not attempt to resolve for you. Every `[bracketed]` field needs a real answer before this is usable.
-
 # Privacy Policy
 
 **Effective date:** [DATE]
