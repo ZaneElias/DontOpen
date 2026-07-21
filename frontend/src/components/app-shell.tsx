@@ -36,7 +36,7 @@ export function AppShell({
             "Simulation ready" to wrap onto two lines. Widening the bar and
             pinning labels to a single line gives each group real breathing
             room instead of stacking them. */}
-        <div className="mx-auto flex w-full max-w-[100rem] items-center justify-between gap-6 px-5 py-3 sm:px-8">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <div className="flex shrink-0 items-center gap-2">
             <div className="flex size-7 items-center justify-center rounded-md bg-action text-action-foreground">
               <PhoneCall className="size-4" />
@@ -48,12 +48,12 @@ export function AppShell({
             <StageProgress current={stage} furthestReached={furthestReached} onNavigate={onNavigate} />
           </div>
 
-          <div className="flex shrink-0 items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2">
             <UsageChip remaining={freeUsesRemaining} />
             <span className="hidden sm:inline-flex">
               <ConfigPill health={health} />
             </span>
-            <span className="flex items-center gap-1 rounded-full border border-line/70 px-1.5 py-1">
+            <span className="flex items-center gap-0.5 rounded-full border border-line/70 px-1 py-0.5">
               <NewJobButton onNewJob={onNewJob} />
               <FeedbackLink />
               <ThemeToggle />
