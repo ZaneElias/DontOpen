@@ -21,6 +21,36 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 /**
+ * Supabase surfaces raw API strings that mean nothing to a tester. Map the ones
+ * we actually hit to something actionable.
+ */
+function friendlyAuthError(message: string): string {
+  const m = message.toLowerCase();
+  if (m.includes("provider is not enabled")) {
+    return "Google sign-in isn't switched on for this project yet. Use email and password for now.";
+  }
+  if (m.includes("email rate limit")) {
+    return "Too many sign-up emails were sent in the last hour. Wait a few minutes, or ask for an account to be created for you.";
+  }
+  if (m.includes("invalid login credentials")) {
+    return "That email and password don't match an account.";
+  }
+  if (m.includes("email not confirmed")) {
+    return "Confirm your email address first, then sign in.";
+  }
+  if (m.includes("user already registered")) {
+    return "An account with that email already exists — sign in instead.";
+  }
+  if (m.includes("password should be")) {
+    return "Password must be at least 6 characters.";
+  }
+  if (m.includes("failed to fetch")) {
+    return "Couldn't reach the authentication service. Check your connection and try again.";
+  }
+  return message;
+}
+
+/**
  * Single source of truth for auth state. Reads the real Supabase session and
  * subscribes to auth changes, so the UI always reflects actual state - this is
  * what the earlier "always logged in" bug was missing.
@@ -52,12 +82,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function signIn(email: string, password: string): Promise<AuthResult> {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return error ? { error: error.message } : {};
+    return error ? { error: friendlyAuthError(error.message) } : {};
   }
 
   async function signUp(email: string, password: string): Promise<AuthResult> {
     const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error) return { error: error.message };
+    if (error) return { error: friendlyAuthError(error.message) };
     // With email confirmation on, Supabase returns a user but no session.
     return { needsEmailConfirmation: !data.session };
   }
@@ -70,7 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       provider: "google",
       options: { redirectTo: typeof window !== "undefined" ? window.location.origin : undefined },
     });
-    return error ? { error: error.message } : {};
+    return error ? { error: friendlyAuthError(error.message) } : {};
   }
 
   async function signOut() {
