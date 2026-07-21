@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useSession, signOut } from "next-auth/react";
+import { useAuth } from "@/components/auth-provider";
 import { RotateCcw } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { BriefStage, BriefStageSkeleton } from "@/components/brief-stage";
@@ -28,10 +28,8 @@ export default function Page() {
   const [furthestReached, setFurthestReached] = useState<Stage>("brief");
   const [sessionExpired, setSessionExpired] = useState(false);
   const [initializing, setInitializing] = useState(true);
-  // Guest entry gate; a Google session bypasses it entirely.
-  const [entered, setEntered] = useState(false);
-  // Named `authSession` to avoid shadowing the `session` sessionStorage helper.
-  const { data: authSession } = useSession();
+  // `session` here is the sessionStorage helper; auth state comes from Supabase.
+  const { user, loading: authLoading, signOut } = useAuth();
 
   const loadHealth = useCallback(() => {
     api.health().then(setHealth).catch(() => {});
@@ -106,10 +104,7 @@ export default function Page() {
    */
   async function handleSignOut() {
     session.clear();
-    setEntered(false);
-    if (authSession) {
-      await signOut({ redirect: false });
-    }
+    await signOut();
     void startFresh();
   }
 
@@ -128,10 +123,12 @@ export default function Page() {
     goToStage("calls");
   }
 
-  // A real Google session counts as entry; "continue as guest" sets `entered`
-  // so the demo still works without OAuth configured.
-  if (!entered && !authSession) {
-    return <LoginScreen onEnter={() => setEntered(true)} />;
+  // Auth is the only gate now: no session, no app.
+  if (authLoading) {
+    return null;
+  }
+  if (!user) {
+    return <LoginScreen />;
   }
 
   if (sessionExpired) {
@@ -168,7 +165,7 @@ export default function Page() {
       onNavigate={goToStage}
       health={health}
       onNewJob={() => startFresh()}
-      user={authSession?.user ?? null}
+      user={user ? { name: user.user_metadata?.full_name ?? null, email: user.email ?? null, image: user.user_metadata?.avatar_url ?? null } : null}
       onSignOut={handleSignOut}
     >
       {stage === "brief" && (

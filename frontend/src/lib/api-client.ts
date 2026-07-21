@@ -10,16 +10,21 @@ import {
   type Quote,
   type Report,
 } from "@/lib/types";
+import { getAccessToken } from "@/lib/supabase";
 
 const BASE = "/api";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
+  // Attach the Supabase access token so the backend can verify the caller.
+  const token = await getAccessToken();
+  const headers: Record<string, string> = {};
+  // FormData must set its own multipart boundary, so don't force a content type.
+  if (!(init?.body instanceof FormData)) headers["Content-Type"] = "application/json";
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  Object.assign(headers, (init?.headers as Record<string, string> | undefined) ?? {});
   try {
-    res = await fetch(`${BASE}${path}`, {
-      ...init,
-      headers: init?.body instanceof FormData ? init.headers : { "Content-Type": "application/json", ...init?.headers },
-    });
+    res = await fetch(`${BASE}${path}`, { ...init, headers });
   } catch {
     throw new ApiError(0, "Could not reach the CallPilot backend. Check your connection and try again.", null);
   }

@@ -2,8 +2,8 @@
 
 import { useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { signIn } from "next-auth/react";
-import { PhoneCall, ArrowRight } from "lucide-react";
+import { PhoneCall } from "lucide-react";
+import { AuthForm } from "@/components/auth-form";
 import { Globe } from "@/components/ui/globe";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AmbientBlob, Stagger, StaggerItem } from "@/components/ui/motion";
@@ -14,7 +14,7 @@ import { AmbientBlob, Stagger, StaggerItem } from "@/components/ui/motion";
  * treatment: drifting ambient light blobs, a frosted-glass panel that blurs
  * into focus, a staggered content reveal, and a spring-press CTA.
  */
-export function LoginScreen({ onEnter }: { onEnter: () => void }) {
+export function LoginScreen() {
   const panelRef = useRef<HTMLDivElement>(null);
   const [glow, setGlow] = useState({ x: -400, y: -400, on: false });
   const reduce = useReducedMotion();
@@ -73,29 +73,7 @@ export function LoginScreen({ onEnter }: { onEnter: () => void }) {
               </p>
             </StaggerItem>
             <StaggerItem className="flex w-full max-w-xs flex-col gap-3">
-              <motion.button
-                onClick={() => signIn("google", { callbackUrl: "/" })}
-                whileHover={reduce ? undefined : { scale: 1.02 }}
-                whileTap={reduce ? undefined : { scale: 0.97 }}
-                transition={{ type: "spring", stiffness: 400, damping: 22 }}
-                className="inline-flex h-11 cursor-pointer items-center justify-center gap-2.5 rounded-lg bg-white px-4 text-sm font-medium text-gray-900 shadow-lg"
-              >
-                <GoogleIcon />
-                Continue with Google
-              </motion.button>
-              <motion.button
-                onClick={onEnter}
-                whileHover={reduce ? undefined : { scale: 1.02 }}
-                whileTap={reduce ? undefined : { scale: 0.97 }}
-                transition={{ type: "spring", stiffness: 400, damping: 22 }}
-                className="group inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-lg bg-action px-4 text-sm font-medium text-action-foreground shadow-lg shadow-action/25"
-              >
-                Continue as guest
-                <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-              </motion.button>
-              <p className="text-center text-[11px] text-ink-muted">
-                Sign in for a personalised session — or skip straight into the demo.
-              </p>
+              <AuthForm />
             </StaggerItem>
           </Stagger>
         </div>

@@ -33,6 +33,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+import auth
 import config
 from schema import (
     CallOutcome,
@@ -177,6 +178,46 @@ async def _persist_on_shutdown() -> None:
     async with _STATE_LOCK:
         data = _snapshot_state()
     _write_snapshot(data)
+
+# ── Auth enforcement ────────────────────────────────────────────────────
+# Every request touching job/quote data must carry a valid Supabase JWT.
+# Deliberately NOT enforced on:
+#   • health/metadata endpoints (no user data),
+#   • CORS preflight,
+#   • the agent webhooks — those are invoked by ElevenLabs rather than a
+#     signed-in browser, and are already scoped to a specific job/call by path.
+_AUTH_PROTECTED_PREFIXES = ("/intake", "/calls", "/quotes", "/negotiate", "/report")
+_AUTH_PUBLIC_PATHS = {"/health", "/verticals", "/calls/counterparty-roster"}
+_AUTH_MACHINE_SUFFIXES = ("/webhook", "/voice-tool")
+
+
+def _requires_auth(path: str) -> bool:
+    if path in _AUTH_PUBLIC_PATHS:
+        return False
+    if path.endswith(_AUTH_MACHINE_SUFFIXES):
+        return False
+    return path.startswith(_AUTH_PROTECTED_PREFIXES)
+
+
+@app.middleware("http")
+async def enforce_supabase_auth(request: Request, call_next):
+    if request.method == "OPTIONS" or not _requires_auth(request.url.path):
+        return await call_next(request)
+    if not auth.auth_configured():
+        return JSONResponse(
+            status_code=503,
+            content={"detail": {"error": "auth_not_configured", "message": "Supabase auth is not configured on the server."}},
+        )
+    try:
+        request.state.user_id = auth.user_id_from_header(request.headers.get("authorization"))
+    except auth.AuthError as exc:
+        logger.info("rejected unauthenticated %s %s: %s", request.method, request.url.path, exc)
+        return JSONResponse(
+            status_code=401,
+            content={"detail": {"error": "unauthenticated", "message": "Sign in to continue."}},
+        )
+    return await call_next(request)
+
 
 MAX_UPLOAD_BYTES = 12 * 1024 * 1024  # 12 MB
 MAX_STR_LEN = 2000  # cap any free-text field the intake accepts
