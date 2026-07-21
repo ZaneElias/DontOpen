@@ -61,6 +61,9 @@ function friendlyAuthError(message: string): string {
   if (m.includes("failed to fetch")) {
     return "Couldn't reach the authentication service. Check your connection and try again.";
   }
+  if (m.includes("redirect") || m.includes("not allowed")) {
+    return "This site's address isn't on the sign-in allow-list yet. Add it under Supabase → Authentication → URL Configuration.";
+  }
   return message;
 }
 
@@ -143,6 +146,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Redirects to Google, then back to the app; the session listener above
     // picks up the resulting session. Requires the Google provider to be
     // enabled in the Supabase dashboard.
+    // redirectTo must be on Supabase's allow-list (Authentication -> URL
+    // Configuration). Using the live origin means the same build works on
+    // localhost and on a deployed domain, but BOTH must be listed there or
+    // Supabase refuses the redirect and sign-in silently returns to the login
+    // screen.
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: typeof window !== "undefined" ? window.location.origin : undefined },

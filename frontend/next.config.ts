@@ -71,6 +71,17 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     const backendUrl = process.env.BACKEND_URL || "http://127.0.0.1:8000";
+    // On a hosted deploy this default is always wrong: 127.0.0.1 is the Vercel
+    // build container, not your backend, so every /api call fails and the app
+    // looks broken immediately after sign-in. Fail loudly at build time rather
+    // than shipping something that silently can't talk to its API.
+    if (process.env.VERCEL && !process.env.BACKEND_URL) {
+      console.warn(
+        "\n[CallPilot] BACKEND_URL is not set. /api/* will proxy to 127.0.0.1:8000, " +
+          "which does not exist in this environment. Set BACKEND_URL to your Render " +
+          "backend URL in the Vercel project settings.\n"
+      );
+    }
     // All of /api/* proxies to FastAPI. Supabase auth does not route through
     // here — the browser talks to Supabase directly — so no carve-out is needed.
     return [{ source: "/api/:path*", destination: `${backendUrl}/:path*` }];
