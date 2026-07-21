@@ -58,6 +58,10 @@ from services import openai_client
 
 logger = logging.getLogger("callpilot")
 
+# Bumped whenever backend behaviour changes, and surfaced on /health so it's
+# possible to tell whether a deploy actually picked up the latest code.
+BACKEND_BUILD = "2026-07-22.transcript-voice-fallback"
+
 app = FastAPI(title="CallPilot API")
 
 app.add_middleware(
@@ -367,10 +371,22 @@ def _job_or_404(job_id: str) -> JobSpec:
     return job
 
 
-def _call_or_404(job_id: str, call_id: str) -> CallRecord:
+def _call_or_404(job_id: str, call_id: str, request: Optional[Request] = None) -> CallRecord:
     for c in CALLS.get(job_id, []):
         if c.call_id == call_id:
             return c
+    # In-memory state doesn't survive a restart, but the frontend keeps showing
+    # the transcript it already polled - so the call looks present while audio
+    # 404s. Fall back to the persisted copy before giving up.
+    token = getattr(getattr(request, "state", None), "access_token", None) if request else None
+    if token and store.store_configured():
+        try:
+            for c in store.list_calls(token, job_id):
+                if c.call_id == call_id:
+                    CALLS.setdefault(job_id, []).append(c)
+                    return c
+        except Exception as exc:
+            logger.warning("persisted call lookup failed for %s: %s", call_id, exc)
     raise HTTPException(status_code=404, detail={"error": "call_not_found", "call_id": call_id})
 
 
@@ -393,6 +409,9 @@ def health() -> Dict[str, Any]:
     # only showing up as a 503 the moment someone tries to start a job.
     status["auth_configured"] = auth.auth_configured()
     status["store_configured"] = store.store_configured()
+    # Lets you confirm which backend build is actually live. Bump when shipping
+    # a fix so "did Render redeploy?" is answerable instead of guesswork.
+    status["backend_build"] = BACKEND_BUILD
     # Surfaced so the UI can warn before the ceiling is hit rather than after.
     status["budget"] = budget.status()
     return status
@@ -998,13 +1017,12 @@ async def proxy_recording(conversation_id: str):
 
 
 @app.get("/calls/{job_id}/{call_id}/audio")
-async def call_audio_replay(job_id: str, call_id: str):
+async def call_audio_replay(job_id: str, call_id: str, request: Request):
     """AI-voiced replay of a simulated call: the actual transcript, synthesized
     with two distinct ElevenLabs voices (agent vs counterparty) and cached per
     call. Synthesis happens on first play (the <audio> tags use preload=none)
     so TTS credits are only spent on calls someone actually listens to."""
-    _job_or_404(job_id)
-    call = _call_or_404(job_id, call_id)
+    call = _call_or_404(job_id, call_id, request)
     if not call.transcript:
         raise HTTPException(status_code=404, detail={"error": "no_transcript", "message": "This call has no transcript to voice."})
     try:
