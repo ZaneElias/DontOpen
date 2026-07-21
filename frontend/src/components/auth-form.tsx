@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { Loader2, Mail, Lock, ArrowRight, Ticket } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
+import { REQUIRE_INVITE_CODE } from "@/lib/access";
 
 type Mode = "signin" | "signup";
 
@@ -30,7 +31,7 @@ export function AuthForm() {
       setError("Enter your email and password.");
       return;
     }
-    if (mode === "signup" && !inviteCode.trim()) {
+    if (mode === "signup" && REQUIRE_INVITE_CODE && !inviteCode.trim()) {
       setError("An invite code is required during the closed beta.");
       return;
     }
@@ -91,7 +92,7 @@ export function AuthForm() {
       {mode === "signup" ? (
         <div className="cp-field flex flex-col justify-center gap-0.5 px-3.5 py-2.5">
           <span className="flex items-center gap-1.5 text-[0.67rem] font-medium tracking-[0.02em] text-ink-muted">
-            <Ticket className="size-3" /> Invite code
+            <Ticket className="size-3" /> Invite code {REQUIRE_INVITE_CODE ? "" : "(optional)"}
           </span>
           <input
             className="cp-control uppercase"
@@ -156,7 +157,9 @@ export function AuthForm() {
 
       {mode === "signup" ? (
         <p className="text-center text-[10px] leading-relaxed text-ink-muted">
-          CallPilot is in closed beta — accounts require an invite code.
+          {REQUIRE_INVITE_CODE
+            ? "CallPilot is in closed beta — accounts require an invite code."
+            : "CallPilot is in beta. Every account includes four free comparisons."}
         </p>
       ) : null}
     </form>

@@ -5,6 +5,7 @@ import { useAuth } from "@/components/auth-provider";
 import { ConsentGate } from "@/components/consent-gate";
 import { UsageExhausted } from "@/components/usage-exhausted";
 import { InviteGate } from "@/components/invite-gate";
+import { REQUIRE_INVITE_CODE } from "@/lib/access";
 import { RotateCcw } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { BriefStage, BriefStageSkeleton } from "@/components/brief-stage";
@@ -147,9 +148,10 @@ export default function Page() {
   if (profileLoading && !profile) {
     return null;
   }
-  // Google OAuth skips the signup form, so the invite code is collected here
-  // instead. Runs before the consent gates so an ungated account never gets in.
-  if (profile && !profile.invite_code_redeemed_at) {
+  // Google OAuth skips the signup form, so when the closed beta is armed the
+  // code is collected here instead. Runs before the consent gates so an
+  // ungated account never reaches the app.
+  if (REQUIRE_INVITE_CODE && profile && !profile.invite_code_redeemed_at) {
     return <InviteGate />;
   }
   if (profile && profile.privacy_accepted_at && !profile.beta_consent_accepted_at) {

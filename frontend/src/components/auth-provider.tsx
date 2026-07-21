@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase, supabaseConfigured } from "@/lib/supabase";
+import { REQUIRE_INVITE_CODE } from "@/lib/access";
 
 type AuthResult = { error?: string; needsEmailConfirmation?: boolean };
 
@@ -123,21 +124,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function signUp(email: string, password: string, inviteCode: string): Promise<AuthResult> {
-    // Closed beta: validate the code BEFORE creating the account, so a failed
-    // signup doesn't consume a hand-issued code. Redeemed only after success.
+    // Validate BEFORE creating the account, so a failed signup can't consume a
+    // hand-issued code. Redeemed only after success.
     const code = inviteCode.trim().toUpperCase();
-    if (!code) return { error: "An invite code is required during the closed beta." };
-    const { data: valid, error: checkError } = await supabase.rpc("check_invite_code", { p_code: code });
-    if (checkError) return { error: friendlyAuthError(checkError.message) };
-    if (!valid) return { error: "That invite code isn't valid or has already been used." };
+    if (!code && REQUIRE_INVITE_CODE) {
+      return { error: "An invite code is required during the closed beta." };
+    }
+    if (code) {
+      const { data: valid, error: checkError } = await supabase.rpc("check_invite_code", { p_code: code });
+      if (checkError) return { error: friendlyAuthError(checkError.message) };
+      if (!valid) return { error: "That invite code isn't valid or has already been used." };
+    }
 
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) return { error: friendlyAuthError(error.message) };
 
-    // Account exists now; spend the code. A failure here is logged rather than
-    // surfaced - the user is already through and shouldn't be blocked by it.
-    const { error: redeemError } = await supabase.rpc("redeem_invite_code", { p_code: code });
-    if (redeemError) console.warn("invite code redeem failed:", redeemError.message);
+    // Account exists now; spend the code if one was given. A failure here is
+    // logged rather than surfaced - the user is already through.
+    if (code) {
+      const { error: redeemError } = await supabase.rpc("redeem_invite_code", { p_code: code });
+      if (redeemError) console.warn("invite code redeem failed:", redeemError.message);
+    }
     // With email confirmation on, Supabase returns a user but no session.
     return { needsEmailConfirmation: !data.session };
   }
