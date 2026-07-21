@@ -141,16 +141,29 @@ export function CallsStage({
     setStarting(true);
     try {
       if (isSimulation) {
+        // Real businesses (from the Tavily call list) can be simulated against:
+        // the counterparty agent plays that company by name, and the same list
+        // is what telephony mode would dial for real.
+        const realTargets = draftTargets.filter((t) => t.phone_number);
         const styles = draftTargets
           .map((t) => t.negotiation_style_label)
           .filter((s): s is NegotiationStyle => Boolean(s));
-        if (styles.length < 3) {
-          toast.error("Simulation mode runs the demo personas — add at least 3 personas (real-business calls need telephony mode).");
+
+        if (realTargets.length === 0 && styles.length < 3) {
+          toast.error("Add at least 3 targets — demo personas, real businesses, or a mix.");
           return;
         }
-        const records = await api.simulateCalls(job.job_id, styles);
+        const records = await api.simulateCalls(
+          job.job_id,
+          styles,
+          realTargets.map((t) => ({ company_name: t.company_name, phone_number: t.phone_number }))
+        );
         setStarted(true);
-        toast.success(`Ran ${records.length} agent-to-agent negotiations`);
+        toast.success(
+          realTargets.length > 0
+            ? `Negotiating with ${records.length} businesses (simulated — no calls placed)`
+            : `Ran ${records.length} agent-to-agent negotiations`
+        );
       } else {
         await api.startCalls(job.job_id, draftTargets);
         setStarted(true);

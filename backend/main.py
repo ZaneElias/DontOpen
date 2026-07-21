@@ -1027,11 +1027,26 @@ def list_quotes(job_id: str) -> List[Quote]:
 # Caller — simulation path (agent-to-agent, no telephony)
 # ──────────────────────────────────────────────────────────────────────────
 
+class SimulatedBusiness(BaseModel):
+    """A real business (typically from the Tavily call list) to simulate against."""
+    company_name: str
+    phone_number: Optional[str] = None
+    address: Optional[str] = None
+    negotiation_style_label: Optional[NegotiationStyle] = None
+
+
 class SimulateCallsRequest(BaseModel):
     styles: List[NegotiationStyle] = Field(
         default_factory=list,
         description="Counterparty styles to run. Defaults to every configured style (the 3 demo "
                     "personas), satisfying the challenge's 'at least three distinct styles'.",
+    )
+    businesses: List[SimulatedBusiness] = Field(
+        default_factory=list,
+        description="Optional real businesses (e.g. from the Tavily call list) to simulate "
+                    "against. When given, each replaces a demo persona's identity while "
+                    "keeping its negotiating behaviour, and styles are assigned round-robin "
+                    "so the run still covers distinct styles.",
     )
     new_turns_limit: int = 30
 
@@ -1201,6 +1216,19 @@ async def simulate_calls(job_id: str, body: SimulateCallsRequest, request: Reque
 
     vconfig = config.load_vertical_config(job.vertical)
     styles = [s.value for s in body.styles] or list(vconfig.get("counterparty_styles", {}).keys())
+
+    # Real businesses sourced from Tavily can stand in for the generic demo
+    # personas: the counterparty agent plays THAT company by name and location,
+    # so a simulation reflects the actual local market instead of invented
+    # firms. Same list is what telephony mode dials for real, so switching modes
+    # changes how the call is placed, not who is contacted.
+    real_businesses = body.businesses or []
+    if real_businesses:
+        styles = [
+            (b.negotiation_style_label.value if b.negotiation_style_label else styles[i % len(styles)])
+            for i, b in enumerate(real_businesses)
+        ]
+
     if len(styles) < 3:
         raise HTTPException(
             status_code=422,
@@ -1216,7 +1244,7 @@ async def simulate_calls(job_id: str, body: SimulateCallsRequest, request: Reque
 
     records: List[CallRecord] = []
     to_run: List[tuple] = []
-    for style in styles:
+    for idx, style in enumerate(styles):
         try:
             persona = config.load_counterparty_persona(job.vertical, style)
         except config.VerticalConfigError as exc:
@@ -1225,10 +1253,29 @@ async def simulate_calls(job_id: str, body: SimulateCallsRequest, request: Reque
                 status=CallStatus.FAILED, mode="simulation", error=str(exc),
             ))
             continue
+
+        business = real_businesses[idx] if idx < len(real_businesses) else None
+        if business:
+            # Re-skin the persona as this real company. Its negotiating
+            # behaviour still comes from the persona prompt — only the identity
+            # changes, and the agent is told not to invent facts about them.
+            persona = {
+                **persona,
+                "company_name": business.company_name,
+                "prompt_text": (
+                    f"You are answering the phone for {business.company_name}"
+                    + (f", located at {business.address}" if business.address else "")
+                    + ". This is a real business. Use only the name and location above — do not "
+                    "invent awards, credentials, history, or staff. Everything about how you "
+                    "negotiate comes from the instructions below.\n\n"
+                    + persona["prompt_text"]
+                ),
+            }
+
         record = CallRecord(
             job_id=job_id,
             company_name=persona["company_name"],
-            phone_number=f"sim:{style}",
+            phone_number=(business.phone_number if business and business.phone_number else f"sim:{style}"),
             negotiation_style_label=NegotiationStyle(style),
             status=CallStatus.IN_PROGRESS,
             mode="simulation",

@@ -99,8 +99,15 @@ export const api = {
 
   // Simulation mode: agent-to-agent, no telephony. Runs the Caller against each
   // counterparty persona and captures the quote from the transcript.
-  simulateCalls: (jobId: string, styles: NegotiationStyle[]) =>
-    request<CallRecord[]>(`/calls/${jobId}/simulate`, { method: "POST", body: JSON.stringify({ styles }) }),
+  simulateCalls: (
+    jobId: string,
+    styles: NegotiationStyle[],
+    businesses: { company_name: string; phone_number?: string; address?: string }[] = []
+  ) =>
+    request<CallRecord[]>(`/calls/${jobId}/simulate`, {
+      method: "POST",
+      body: JSON.stringify({ styles, businesses }),
+    }),
 
   simulateNegotiation: (jobId: string, callbackCallIds: string[] = []) =>
     request<CallRecord[]>(`/negotiate/${jobId}/simulate`, {
