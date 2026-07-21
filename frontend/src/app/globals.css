@@ -213,6 +213,139 @@ body {
   font-weight: 500;
 }
 
+/* ── Form fields ───────────────────────────────────────────────────────
+   Raised-glass field. The WRAPPER carries all the chrome (translucent fill,
+   1px white→transparent gradient hairline via a masked ::before, inset top
+   highlight, layered shadow, animated focus glow) because ::before does not
+   render on replaced elements like <input>. The control inside is transparent. */
+.cp-field {
+  position: relative;
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    0 10px 28px -18px rgba(0, 0, 0, 0.6);
+  transition: background-color 200ms ease, box-shadow 200ms ease;
+}
+.cp-field::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    160deg,
+    rgba(255, 255, 255, 0.3),
+    rgba(255, 255, 255, 0.07) 42%,
+    rgba(255, 255, 255, 0) 72%
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  transition: background 220ms ease;
+}
+/* Focus: soft glow + the hairline warms to the action colour (~200ms). */
+.cp-field:focus-within {
+  background: rgba(255, 255, 255, 0.075);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.13),
+    0 0 0 3px color-mix(in srgb, var(--action) 18%, transparent),
+    0 14px 36px -16px color-mix(in srgb, var(--action) 55%, transparent);
+}
+.cp-field:focus-within::before {
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--action) 85%, white),
+    rgba(255, 255, 255, 0.14) 55%,
+    rgba(255, 255, 255, 0) 82%
+  );
+}
+:root:not([data-theme="dark"]) .cp-field {
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 1px 2px rgba(28, 37, 48, 0.07),
+    0 10px 26px -20px rgba(28, 37, 48, 0.35);
+}
+:root:not([data-theme="dark"]) .cp-field::before {
+  background: linear-gradient(160deg, rgba(28, 37, 48, 0.18), rgba(28, 37, 48, 0.06) 45%, rgba(28, 37, 48, 0) 75%);
+}
+
+/* Floating label. Driven by plain CSS (:focus-within + [data-filled]) rather
+   than Tailwind group-* variants, so it can't silently break if a variant
+   isn't generated. Rests centred, then shrinks into the top edge. */
+.cp-label {
+  position: absolute;
+  left: 0.95rem;
+  top: 50%;
+  transform: translateY(-50%);
+  transform-origin: left center;
+  z-index: 10;
+  font-size: 0.875rem;
+  color: var(--ink-muted);
+  pointer-events: none;
+  transition:
+    top 200ms ease,
+    font-size 200ms ease,
+    color 200ms ease,
+    transform 200ms ease,
+    letter-spacing 200ms ease;
+}
+/* Floated state is toggled by an explicit class from React — not :focus-within
+   or a Tailwind variant. A nested motion component here gets captured by the
+   parent Stagger variant tree and stops animating, so a plain class wins. */
+.cp-label--floated {
+  top: 0.45rem;
+  transform: translateY(0);
+  font-size: 0.67rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+.cp-label--focused {
+  color: var(--action);
+}
+
+/* Transparent control that sits inside .cp-field; top padding leaves room for
+   the floating label. */
+.cp-control {
+  width: 100%;
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: var(--ink);
+  font-size: 0.875rem;
+  /* The .cp-field wrapper owns the padding now (label sits above in flow). */
+  padding: 0.1rem 0;
+}
+/* Placeholder is redundant with the floating label until the field is focused,
+   where it becomes a useful example. */
+.cp-control::placeholder {
+  color: transparent;
+  transition: color 200ms ease;
+}
+.cp-control:focus::placeholder {
+  color: color-mix(in srgb, var(--ink-muted) 70%, transparent);
+}
+/* Theme the native date picker button so it stops looking like an OS default. */
+.cp-field input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) opacity(0.45);
+  cursor: pointer;
+  transition: filter 150ms ease;
+}
+.cp-field input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  filter: invert(1) opacity(0.85);
+}
+:root:not([data-theme="dark"]) .cp-field input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: opacity(0.5);
+}
+
 /* Animated rainbow background (rainbow-shader.tsx). The shader canvas renders a
    black field with glowing colour arcs, so the veil on top is what adapts to
    the theme: a dark cinematic veil in dark mode, and a near-opaque light wash

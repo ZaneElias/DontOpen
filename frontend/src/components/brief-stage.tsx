@@ -5,8 +5,6 @@ import { toast } from "sonner";
 import { Upload, Sparkles, CheckCircle2, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +14,9 @@ import { VoiceIntakeWidget } from "@/components/voice-intake-widget";
 import { Hero } from "@/components/hero";
 import { GenericIntakeForm } from "@/components/generic-intake-form";
 import { SectionHeader } from "@/components/ui/section";
+import { FloatingField, AnimatedCheckbox, TiltCard } from "@/components/ui/field";
+import { Stagger, StaggerItem } from "@/components/ui/motion";
+import { cn } from "@/lib/utils";
 import { api, ApiError } from "@/lib/api-client";
 import type { HealthStatus, JobSpec } from "@/lib/types";
 
@@ -214,28 +215,43 @@ export function BriefStage({
         </CardContent>
       </Card>
 
+      <TiltCard max={3.5}>
       <Card>
         <CardHeader>
           <CardTitle>Move details</CardTitle>
           <CardDescription>Edit anything the interview or document upload got wrong — this is the spec that gets read to every mover.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Moving from" source={provenance.origin_address}>
-              <Input value={form.origin_address} onChange={(e) => set("origin_address", e.target.value)} placeholder="Rock Hill, SC" />
-            </Field>
-            <Field label="Moving to" source={provenance.destination_address}>
-              <Input value={form.destination_address} onChange={(e) => set("destination_address", e.target.value)} placeholder="Charlotte, NC" />
-            </Field>
-            <Field label="Move date" source={provenance.move_date}>
-              <Input type="date" value={form.move_date} onChange={(e) => set("move_date", e.target.value)} />
-            </Field>
-            <Field label="Bedrooms" source={provenance.bedrooms}>
-              <Input type="number" min={0} value={form.bedrooms} onChange={(e) => set("bedrooms", e.target.value)} placeholder="2" />
-            </Field>
-            <Field label="Inventory size" source={provenance.inventory_size}>
+          <Stagger gap={0.04} className="grid gap-3.5 sm:grid-cols-2">
+            <StaggerItem>
+              <FloatingField label="Moving from" filled={!!form.origin_address} badge={<ProvenanceBadge source={provenance.origin_address} />}>
+                <input className="cp-control" value={form.origin_address} onChange={(e) => set("origin_address", e.target.value)} placeholder="Rock Hill, SC" />
+              </FloatingField>
+            </StaggerItem>
+            <StaggerItem>
+              <FloatingField label="Moving to" filled={!!form.destination_address} badge={<ProvenanceBadge source={provenance.destination_address} />}>
+                <input className="cp-control" value={form.destination_address} onChange={(e) => set("destination_address", e.target.value)} placeholder="Charlotte, NC" />
+              </FloatingField>
+            </StaggerItem>
+            <StaggerItem>
+              <FloatingField label="Move date" filled={!!form.move_date} badge={<ProvenanceBadge source={provenance.move_date} />}>
+                <input
+                  type="date"
+                  className={cn("cp-control", !form.move_date && "text-transparent focus:text-ink")}
+                  value={form.move_date}
+                  onChange={(e) => set("move_date", e.target.value)}
+                />
+              </FloatingField>
+            </StaggerItem>
+            <StaggerItem>
+              <FloatingField label="Bedrooms" filled={!!form.bedrooms} badge={<ProvenanceBadge source={provenance.bedrooms} />}>
+                <input type="number" min={0} className="cp-control" value={form.bedrooms} onChange={(e) => set("bedrooms", e.target.value)} placeholder="2" />
+              </FloatingField>
+            </StaggerItem>
+            <StaggerItem>
+              <FloatingField label="Inventory size" filled={!!form.inventory_size} badge={<ProvenanceBadge source={provenance.inventory_size} />}>
               <Select value={form.inventory_size} onValueChange={(v) => set("inventory_size", v)}>
-                <SelectTrigger><SelectValue placeholder="Select size" /></SelectTrigger>
+                <SelectTrigger className="cp-control h-auto justify-between border-0 bg-transparent shadow-none focus:ring-0"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="studio">Studio</SelectItem>
                   <SelectItem value="1br">1 bedroom</SelectItem>
@@ -244,46 +260,59 @@ export function BriefStage({
                   <SelectItem value="4br+">4+ bedroom</SelectItem>
                 </SelectContent>
               </Select>
-            </Field>
-            <Field label="Packing preference" source={provenance.packing_preference}>
+              </FloatingField>
+            </StaggerItem>
+            <StaggerItem>
+              <FloatingField label="Packing preference" filled={!!form.packing_preference} badge={<ProvenanceBadge source={provenance.packing_preference} />}>
               <Select value={form.packing_preference} onValueChange={(v) => set("packing_preference", v)}>
-                <SelectTrigger><SelectValue placeholder="Select preference" /></SelectTrigger>
+                <SelectTrigger className="cp-control h-auto justify-between border-0 bg-transparent shadow-none focus:ring-0"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="self_pack">I&apos;ll pack myself</SelectItem>
                   <SelectItem value="full_pack">Full-service packing</SelectItem>
                   <SelectItem value="partial_pack">Partial packing help</SelectItem>
                 </SelectContent>
               </Select>
-            </Field>
-            <Field label="Stairs at pickup (flights)" source={provenance.stairs_origin}>
-              <Input type="number" min={0} value={form.stairs_origin} onChange={(e) => set("stairs_origin", e.target.value)} />
-            </Field>
-            <Field label="Stairs at drop-off (flights)" source={provenance.stairs_destination}>
-              <Input type="number" min={0} value={form.stairs_destination} onChange={(e) => set("stairs_destination", e.target.value)} />
-            </Field>
-          </div>
-
-          <div className="flex flex-wrap gap-4">
-            <Checkbox label="Elevator at pickup" checked={form.elevator_origin} onChange={(v) => set("elevator_origin", v)} />
-            <Checkbox label="Elevator at drop-off" checked={form.elevator_destination} onChange={(v) => set("elevator_destination", v)} />
-            <Checkbox label="Long carry expected (truck can't park close)" checked={form.long_carry_expected} onChange={(v) => set("long_carry_expected", v)} />
-          </div>
-
-          <Field label="Large or special items" source={provenance.large_items}>
-            <Input
-              value={form.large_items}
-              onChange={(e) => set("large_items", e.target.value)}
-              placeholder="piano, safe, pool table (comma-separated)"
-            />
-          </Field>
-
-          <Field label="Anything else a mover should know" source={provenance.special_handling_notes}>
-            <Textarea
-              value={form.special_handling_notes}
-              onChange={(e) => set("special_handling_notes", e.target.value)}
-              placeholder="Tight parking, pets, HOA rules, timing constraints…"
-            />
-          </Field>
+              </FloatingField>
+            </StaggerItem>
+            <StaggerItem>
+              <FloatingField label="Stairs at pickup (flights)" filled={form.stairs_origin !== ""} badge={<ProvenanceBadge source={provenance.stairs_origin} />}>
+                <input type="number" min={0} className="cp-control" value={form.stairs_origin} onChange={(e) => set("stairs_origin", e.target.value)} placeholder="0" />
+              </FloatingField>
+            </StaggerItem>
+            <StaggerItem>
+              <FloatingField label="Stairs at drop-off (flights)" filled={form.stairs_destination !== ""} badge={<ProvenanceBadge source={provenance.stairs_destination} />}>
+                <input type="number" min={0} className="cp-control" value={form.stairs_destination} onChange={(e) => set("stairs_destination", e.target.value)} placeholder="0" />
+              </FloatingField>
+            </StaggerItem>
+            <StaggerItem className="sm:col-span-2">
+              <div className="cp-field flex flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3.5">
+                <AnimatedCheckbox label="Elevator at pickup" checked={form.elevator_origin} onChange={(v) => set("elevator_origin", v)} />
+                <AnimatedCheckbox label="Elevator at drop-off" checked={form.elevator_destination} onChange={(v) => set("elevator_destination", v)} />
+                <AnimatedCheckbox label="Long carry expected (truck can't park close)" checked={form.long_carry_expected} onChange={(v) => set("long_carry_expected", v)} />
+              </div>
+            </StaggerItem>
+            <StaggerItem className="sm:col-span-2">
+              <FloatingField label="Large or special items" filled={!!form.large_items} badge={<ProvenanceBadge source={provenance.large_items} />}>
+                <input
+                  className="cp-control"
+                  value={form.large_items}
+                  onChange={(e) => set("large_items", e.target.value)}
+                  placeholder="piano, safe, pool table (comma-separated)"
+                />
+              </FloatingField>
+            </StaggerItem>
+            <StaggerItem className="sm:col-span-2">
+              <FloatingField label="Anything else a mover should know" filled={!!form.special_handling_notes} badge={<ProvenanceBadge source={provenance.special_handling_notes} />}>
+                <textarea
+                  rows={3}
+                  className="cp-control resize-y"
+                  value={form.special_handling_notes}
+                  onChange={(e) => set("special_handling_notes", e.target.value)}
+                  placeholder="Tight parking, pets, HOA rules, timing constraints…"
+                />
+              </FloatingField>
+            </StaggerItem>
+          </Stagger>
 
           {job.needs_review.length > 0 && (
             <Alert variant="warning">
@@ -310,6 +339,7 @@ export function BriefStage({
           </div>
         </CardContent>
       </Card>
+      </TiltCard>
         </>
       ) : (
         <GenericIntakeForm job={job} onJobUpdated={onJobUpdated} onConfirmed={onConfirmed} />
@@ -343,19 +373,8 @@ function VerticalPicker({ current, onSwitch }: { current: string; onSwitch: (v: 
   );
 }
 
-function Field({ label, source, children }: { label: string; source?: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between">
-        <Label>{label}</Label>
-        {source && <ProvenanceBadge source={source} />}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function ProvenanceBadge({ source }: { source: string }) {
+function ProvenanceBadge({ source }: { source?: string }) {
+  if (!source) return null;
   const map: Record<string, { label: string; variant: "action" | "done" | "pending" }> = {
     voice_interview: { label: "from voice", variant: "action" },
     document: { label: "from document", variant: "done" },
@@ -363,20 +382,6 @@ function ProvenanceBadge({ source }: { source: string }) {
   };
   const cfg = map[source] ?? { label: source, variant: "pending" as const };
   return <Badge variant={cfg.variant}>{cfg.label}</Badge>;
-}
-
-function Checkbox({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <label className="flex cursor-pointer items-center gap-2 text-sm text-ink">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="size-4 rounded border-line-strong accent-[var(--action)]"
-      />
-      {label}
-    </label>
-  );
 }
 
 export function BriefStageSkeleton() {
