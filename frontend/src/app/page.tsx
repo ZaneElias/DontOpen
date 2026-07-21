@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { ConsentGate } from "@/components/consent-gate";
+import { UsageExhausted } from "@/components/usage-exhausted";
 import { RotateCcw } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { BriefStage, BriefStageSkeleton } from "@/components/brief-stage";
@@ -28,6 +29,8 @@ export default function Page() {
   const [stage, setStage] = useState<Stage>("brief");
   const [furthestReached, setFurthestReached] = useState<Stage>("brief");
   const [sessionExpired, setSessionExpired] = useState(false);
+  // Set when the backend reports the account is out of free comparisons (402).
+  const [usageExhausted, setUsageExhausted] = useState(false);
   const [initializing, setInitializing] = useState(true);
   // `session` here is the sessionStorage helper; auth state comes from Supabase.
   const { user, loading: authLoading, signOut, profile, profileLoading } = useAuth();
@@ -58,14 +61,20 @@ export default function Page() {
     setSessionExpired(false);
     setInitializing(true);
     try {
+      setUsageExhausted(false);
       const newJob = await api.createIntake(chosen);
       session.setJobId(newJob.job_id);
       session.setStage("brief");
       setJob(newJob);
       setStage("brief");
       setFurthestReached("brief");
-    } catch {
-      // health panel will show the connectivity problem
+    } catch (err) {
+      // 402 means the account has spent all its free comparisons - a real
+      // product state, not a connectivity failure, so surface it as its own screen.
+      if (err instanceof ApiError && err.status === 402) {
+        setUsageExhausted(true);
+      }
+      // anything else: the health panel surfaces the connectivity problem
     } finally {
       setInitializing(false);
     }
@@ -199,6 +208,22 @@ export default function Page() {
     );
   }
 
+  if (usageExhausted || (profile && profile.free_uses_remaining <= 0 && !job)) {
+    return (
+      <AppShell
+        stage="brief"
+        furthestReached="brief"
+        onNavigate={() => {}}
+        health={health}
+        user={user ? { name: user.user_metadata?.full_name ?? null, email: user.email ?? null, image: user.user_metadata?.avatar_url ?? null } : null}
+        onSignOut={handleSignOut}
+        freeUsesRemaining={profile?.free_uses_remaining ?? 0}
+      >
+        <UsageExhausted />
+      </AppShell>
+    );
+  }
+
   if (initializing || !job) {
     return (
       <AppShell stage="brief" furthestReached="brief" onNavigate={() => {}} health={health}>
@@ -216,6 +241,7 @@ export default function Page() {
       onNewJob={() => startFresh()}
       user={user ? { name: user.user_metadata?.full_name ?? null, email: user.email ?? null, image: user.user_metadata?.avatar_url ?? null } : null}
       onSignOut={handleSignOut}
+      freeUsesRemaining={profile?.free_uses_remaining ?? null}
     >
       {stage === "brief" && (
         <BriefStage

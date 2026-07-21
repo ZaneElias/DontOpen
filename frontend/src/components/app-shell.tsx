@@ -15,6 +15,7 @@ export function AppShell({
   onNewJob,
   user,
   onSignOut,
+  freeUsesRemaining,
   children,
 }: {
   stage: Stage;
@@ -24,6 +25,7 @@ export function AppShell({
   onNewJob?: () => void;
   user?: { name?: string | null; email?: string | null; image?: string | null } | null;
   onSignOut?: () => void;
+  freeUsesRemaining?: number | null;
   children: React.ReactNode;
 }) {
   return (
@@ -46,6 +48,7 @@ export function AppShell({
           <div className="flex items-center justify-between gap-4 sm:justify-end">
             <StageProgress current={stage} furthestReached={furthestReached} onNavigate={onNavigate} />
             <div className="hidden items-center gap-2 sm:flex">
+              <UsageChip remaining={freeUsesRemaining} />
               <FeedbackLink />
               <NewJobButton onNewJob={onNewJob} />
               <ThemeToggle />
@@ -125,6 +128,28 @@ function AccountChip({
         <LogOut className="size-3.5" />
       </button>
     </div>
+  );
+}
+
+/**
+ * Remaining free comparisons. Warns as it runs low so the limit is never a
+ * surprise at the moment someone tries to start a run.
+ */
+function UsageChip({ remaining }: { remaining?: number | null }) {
+  if (remaining == null) return null;
+  const tone =
+    remaining <= 0
+      ? "border-status-flag/40 bg-status-flag-bg text-status-flag"
+      : remaining === 1
+        ? "border-status-live/40 bg-status-live-bg text-status-live"
+        : "border-line text-ink-muted";
+  return (
+    <span
+      title={`${remaining} free comparison${remaining === 1 ? "" : "s"} left on this account`}
+      className={cn("rounded-full border px-2.5 py-1 text-xs font-medium", tone)}
+    >
+      {remaining > 0 ? `${remaining} left` : "No runs left"}
+    </span>
   );
 }
 
