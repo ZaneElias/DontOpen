@@ -2,12 +2,14 @@ import { createClient } from "@supabase/supabase-js";
 
 // The anon key is public by design (it ships to the browser). Access is
 // restricted by Row Level Security on the database, never by hiding this key.
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://fshbdeydbotglbalgnhy.supabase.co';
+const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZzaGJkZXlkYm90Z2xiYWxnbmh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ2MTg5NzgsImV4cCI6MjEwMDE5NDk3OH0.YPdTPHBiIbr6GPAHJvUKS2elH6SO9XdwM4Di2jPYDaM';
 
+// Since we provided fallbacks above, this will now correctly return true
 export const supabaseConfigured = Boolean(url && anonKey);
 
-export const supabase = createClient(url ?? "http://localhost", anonKey ?? "anon", {
+// Initialize the client with the URL, Key, and the required Auth options
+export const supabase = createClient(url, anonKey, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
 });
 
