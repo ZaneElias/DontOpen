@@ -48,11 +48,20 @@ const securityHeaders = [
   { key: "Permissions-Policy", value: "camera=(), geolocation=(), microphone=(self)" },
 ];
 
+// Pin the workspace root to this app. A stray lockfile in a parent dir
+// (e.g. ~/package-lock.json) otherwise makes Next infer the wrong root, which
+// corrupts dev HMR/caching (phantom "parse error" overlays).
+//
+// Next 16 requires turbopack.root and outputFileTracingRoot to be IDENTICAL —
+// setting only one fails the Vercel build with:
+//   "Both outputFileTracingRoot and turbopack.root are set, but they must have
+//    the same value."
+// Vercel infers outputFileTracingRoot itself, so both are pinned here.
+const projectRoot = __dirname;
+
 const nextConfig: NextConfig = {
-  // Pin the workspace root to this app. A stray lockfile in a parent dir
-  // (e.g. ~/package-lock.json) otherwise makes Next infer the wrong root,
-  // which corrupts dev HMR/caching (phantom "parse error" overlays).
-  turbopack: { root: __dirname },
+  turbopack: { root: projectRoot },
+  outputFileTracingRoot: projectRoot,
   // Effects run once (like production). Avoids three.js re-initialising the
   // WebGL background on React's dev-only double-mount; lint rules still enforce
   // render purity, so nothing is lost.

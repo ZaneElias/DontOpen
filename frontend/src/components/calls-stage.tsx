@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Skeleton } from "@/components/ui/skeleton";
 import { SetupPanel } from "@/components/setup-panel";
 import { SectionHeader } from "@/components/ui/section";
+import { AuthedAudio } from "@/components/ui/authed-audio";
 import { api, ApiError } from "@/lib/api-client";
 import { usePolling } from "@/hooks/use-polling";
 import { cn } from "@/lib/utils";
@@ -506,9 +507,7 @@ function CallCard({ call, quote }: { call: CallRecord; quote?: Quote }) {
               </div>
               {call.recording_url && (
                 <div className="space-y-1">
-                  <audio controls preload="none" src={call.recording_url} className="w-full">
-                    Your browser does not support audio playback.
-                  </audio>
+                  <AuthedAudio src={call.recording_url} className="w-full" />
                   {call.mode === "simulation" && (
                     <p className="text-[11px] text-ink-muted">
                       AI-voiced replay of this call&apos;s actual transcript (generated on first play).

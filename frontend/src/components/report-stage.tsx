@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { api, ApiError } from "@/lib/api-client";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { SectionHeader } from "@/components/ui/section";
+import { AuthedAudio } from "@/components/ui/authed-audio";
 import { cn } from "@/lib/utils";
 import type { JobSpec, Quote, RankedQuote, Report } from "@/lib/types";
 
@@ -124,9 +125,7 @@ export function ReportStage({ job }: { job: JobSpec }) {
             <p className="flex items-center gap-1.5 text-xs font-medium text-ink">
               <Volume2 className="size-3.5 text-action" /> Listen to the recommendation
             </p>
-            <audio controls preload="none" src={`/api/report/${report.job_id}/audio`} className="w-full">
-              Your browser does not support audio playback.
-            </audio>
+            <AuthedAudio src={`/api/report/${report.job_id}/audio`} className="w-full" />
           </div>
         </CardContent>
         </Card>

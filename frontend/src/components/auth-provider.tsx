@@ -11,6 +11,7 @@ export type Profile = {
   id: string;
   email: string | null;
   privacy_accepted_at: string | null;
+  invite_code_redeemed_at: string | null;
   beta_consent_accepted_at: string | null;
   free_uses_remaining: number;
 };
