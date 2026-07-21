@@ -31,36 +31,41 @@ export function AppShell({
   return (
     <div className="min-h-screen bg-transparent">
       <header className="sticky top-0 z-40 border-b border-line bg-paper/90 backdrop-blur">
-        {/* Two rows on purpose. The four-step tracker and the account/status
-            controls were previously competing for one line, which is what made
-            the bar feel cramped at every width. Identity + controls sit on top;
-            the tracker gets its own full-width row underneath. */}
-        <div className="mx-auto max-w-5xl px-4 sm:px-6">
-          <div className="flex items-center justify-between gap-4 py-2.5">
-            <div className="flex items-center gap-2">
-              <div className="flex size-7 items-center justify-center rounded-md bg-action text-action-foreground">
-                <PhoneCall className="size-4" />
-              </div>
-              <span className="font-serif text-lg font-semibold tracking-tight text-ink">CallPilot</span>
+        {/* One row. The cramping came from squeezing everything into max-w-5xl
+            on a wide screen, which forced labels like "New job" and
+            "Simulation ready" to wrap onto two lines. Widening the bar and
+            pinning labels to a single line gives each group real breathing
+            room instead of stacking them. */}
+        <div className="mx-auto flex w-full max-w-[100rem] items-center justify-between gap-6 px-5 py-3 sm:px-8">
+          <div className="flex shrink-0 items-center gap-2">
+            <div className="flex size-7 items-center justify-center rounded-md bg-action text-action-foreground">
+              <PhoneCall className="size-4" />
             </div>
-
-            <div className="flex items-center gap-2 sm:gap-2.5">
-              <UsageChip remaining={freeUsesRemaining} />
-              <span className="hidden sm:inline-flex">
-                <ConfigPill health={health} />
-              </span>
-              <span className="flex items-center gap-0.5 rounded-full border border-line/70 px-1 py-0.5">
-                <NewJobButton onNewJob={onNewJob} />
-                <FeedbackLink />
-                <ThemeToggle />
-              </span>
-              <AccountChip user={user} onSignOut={onSignOut} />
-            </div>
+            <span className="font-serif text-lg font-semibold tracking-tight text-ink">CallPilot</span>
           </div>
 
-          <div className="flex justify-center border-t border-line/40 py-2 sm:justify-start">
+          <div className="hidden flex-1 justify-center md:flex">
             <StageProgress current={stage} furthestReached={furthestReached} onNavigate={onNavigate} />
           </div>
+
+          <div className="flex shrink-0 items-center gap-3">
+            <UsageChip remaining={freeUsesRemaining} />
+            <span className="hidden sm:inline-flex">
+              <ConfigPill health={health} />
+            </span>
+            <span className="flex items-center gap-1 rounded-full border border-line/70 px-1.5 py-1">
+              <NewJobButton onNewJob={onNewJob} />
+              <FeedbackLink />
+              <ThemeToggle />
+            </span>
+            <AccountChip user={user} onSignOut={onSignOut} />
+          </div>
+        </div>
+
+        {/* Tracker only drops below the bar on narrow screens, where it genuinely
+            cannot fit alongside everything else. */}
+        <div className="flex justify-center border-t border-line/40 px-4 py-2 md:hidden">
+          <StageProgress current={stage} furthestReached={furthestReached} onNavigate={onNavigate} />
         </div>
       </header>
 
@@ -112,7 +117,7 @@ function AccountChip({
   if (!onSignOut) return null;
   const label = user?.name?.split(" ")[0] ?? (user?.email ? user.email.split("@")[0] : "Guest");
   return (
-    <div className="flex items-center gap-1.5 rounded-full border border-line py-0.5 pl-0.5 pr-0.5">
+    <div className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-line py-0.5 pl-0.5 pr-0.5">
       <span className="flex items-center gap-1.5 pl-1.5">
         {user?.image ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -151,7 +156,7 @@ function UsageChip({ remaining }: { remaining?: number | null }) {
   return (
     <span
       title={`${remaining} free comparison${remaining === 1 ? "" : "s"} left on this account`}
-      className={cn("rounded-full border px-2.5 py-1 text-xs font-medium", tone)}
+      className={cn("whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium", tone)}
     >
       {remaining > 0 ? `${remaining} left` : "No runs left"}
     </span>
@@ -203,7 +208,7 @@ function ConfigPill({ health }: { health: HealthStatus | null }) {
   return (
     <div
       className={cn(
-        "flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium",
+        "flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium",
         ready ? "border-status-done/30 bg-status-done-bg text-status-done" : "border-status-live/30 bg-status-live-bg text-status-live"
       )}
       title={ready ? `All required ${health.call_mode} configuration is present.` : `${health.missing_required_count} required setting(s) missing.`}
