@@ -346,6 +346,33 @@ body {
   filter: opacity(0.5);
 }
 
+/* ── Rendered markdown (consent screens) ─────────────────────────────────────
+   Legal copy comes from a markdown file verbatim, so it needs real document
+   styling rather than the app's UI type scale. */
+.cp-prose h1 { font-size: 1.35rem; font-weight: 600; color: var(--ink); margin: 1.4rem 0 0.6rem; letter-spacing: -0.02em; }
+.cp-prose h2 { font-size: 1.05rem; font-weight: 600; color: var(--ink); margin: 1.5rem 0 0.5rem; }
+.cp-prose h3 { font-size: 0.92rem; font-weight: 600; color: var(--ink); margin: 1.1rem 0 0.4rem; }
+.cp-prose p { margin: 0.65rem 0; }
+.cp-prose ul, .cp-prose ol { margin: 0.65rem 0; padding-left: 1.25rem; list-style: disc; }
+.cp-prose ol { list-style: decimal; }
+.cp-prose li { margin: 0.3rem 0; }
+.cp-prose strong { color: var(--ink); font-weight: 600; }
+.cp-prose a { color: var(--action); text-decoration: underline; text-underline-offset: 2px; }
+.cp-prose code { font-size: 0.85em; background: color-mix(in srgb, var(--ink) 10%, transparent); padding: 0.1rem 0.3rem; border-radius: 0.25rem; }
+.cp-prose hr { border: 0; border-top: 1px solid var(--line); margin: 1.2rem 0; }
+/* The draft warning at the top of the policy is a blockquote - make it read as a callout. */
+.cp-prose blockquote {
+  border-left: 3px solid var(--status-live);
+  background: var(--status-live-bg);
+  color: var(--ink);
+  padding: 0.7rem 0.9rem;
+  border-radius: 0.4rem;
+  margin: 0.5rem 0 1rem;
+}
+.cp-prose table { width: 100%; border-collapse: collapse; margin: 0.8rem 0; font-size: 0.82rem; }
+.cp-prose th, .cp-prose td { border: 1px solid var(--line); padding: 0.4rem 0.55rem; text-align: left; vertical-align: top; }
+.cp-prose th { color: var(--ink); font-weight: 600; background: color-mix(in srgb, var(--ink) 6%, transparent); }
+
 /* Animated rainbow background (rainbow-shader.tsx). The shader canvas renders a
    black field with glowing colour arcs, so the veil on top is what adapts to
    the theme: a dark cinematic veil in dark mode, and a near-opaque light wash

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
+import { ConsentGate } from "@/components/consent-gate";
 import { RotateCcw } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { BriefStage, BriefStageSkeleton } from "@/components/brief-stage";
@@ -29,7 +30,7 @@ export default function Page() {
   const [sessionExpired, setSessionExpired] = useState(false);
   const [initializing, setInitializing] = useState(true);
   // `session` here is the sessionStorage helper; auth state comes from Supabase.
-  const { user, loading: authLoading, signOut } = useAuth();
+  const { user, loading: authLoading, signOut, profile, profileLoading } = useAuth();
 
   const loadHealth = useCallback(() => {
     api.health().then(setHealth).catch(() => {});
@@ -129,6 +130,23 @@ export default function Page() {
   }
   if (!user) {
     return <LoginScreen />;
+  }
+
+  // Consent gates run before any app access. Wait for the profile so an
+  // already-accepted user never sees the screen flash.
+  if (profileLoading && !profile) {
+    return null;
+  }
+  if (profile && !profile.privacy_accepted_at) {
+    return (
+      <ConsentGate
+        title="Privacy Policy"
+        intro="Please read and accept before using CallPilot. This covers what we collect, who we share it with, and how call recordings are handled."
+        sourceUrl="/privacy-policy.md"
+        column="privacy_accepted_at"
+        confirmLabel="I have read and accept the Privacy Policy"
+      />
+    );
   }
 
   if (sessionExpired) {

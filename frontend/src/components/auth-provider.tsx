@@ -1,10 +1,19 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase, supabaseConfigured } from "@/lib/supabase";
 
 type AuthResult = { error?: string; needsEmailConfirmation?: boolean };
+
+/** Row from public.profiles — consent gates and usage limits live here. */
+export type Profile = {
+  id: string;
+  email: string | null;
+  privacy_accepted_at: string | null;
+  beta_consent_accepted_at: string | null;
+  free_uses_remaining: number;
+};
 
 type AuthContextValue = {
   session: Session | null;
@@ -12,6 +21,10 @@ type AuthContextValue = {
   /** True until the initial session lookup resolves - prevents a login flash. */
   loading: boolean;
   configured: boolean;
+  profile: Profile | null;
+  /** True while the profile row is being (re)loaded for a signed-in user. */
+  profileLoading: boolean;
+  refreshProfile: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<AuthResult>;
   signUp: (email: string, password: string) => Promise<AuthResult>;
   signInWithGoogle: () => Promise<AuthResult>;
@@ -58,6 +71,26 @@ function friendlyAuthError(message: string): string {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+
+  const userId = session?.user?.id ?? null;
+
+  const refreshProfile = useCallback(async () => {
+    if (!supabaseConfigured || !userId) {
+      setProfile(null);
+      return;
+    }
+    setProfileLoading(true);
+    // RLS scopes this to the caller's own row; the trigger creates it at signup.
+    const { data } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+    setProfile((data as Profile) ?? null);
+    setProfileLoading(false);
+  }, [userId]);
+
+  useEffect(() => {
+    void refreshProfile();
+  }, [refreshProfile]);
 
   useEffect(() => {
     if (!supabaseConfigured) {
@@ -106,6 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function signOut() {
     await supabase.auth.signOut();
     setSession(null);
+    setProfile(null);
   }
 
   return (
@@ -115,6 +149,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user: session?.user ?? null,
         loading,
         configured: supabaseConfigured,
+        profile,
+        profileLoading,
+        refreshProfile,
         signIn,
         signUp,
         signInWithGoogle,
