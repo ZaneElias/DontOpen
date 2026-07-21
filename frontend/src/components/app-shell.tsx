@@ -31,28 +31,24 @@ export function AppShell({
   return (
     <div className="min-h-screen bg-transparent">
       <header className="sticky top-0 z-40 border-b border-line bg-paper/90 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <div className="flex items-center justify-between gap-4">
+        {/* Two rows on purpose. The four-step tracker and the account/status
+            controls were previously competing for one line, which is what made
+            the bar feel cramped at every width. Identity + controls sit on top;
+            the tracker gets its own full-width row underneath. */}
+        <div className="mx-auto max-w-5xl px-4 sm:px-6">
+          <div className="flex items-center justify-between gap-4 py-2.5">
             <div className="flex items-center gap-2">
               <div className="flex size-7 items-center justify-center rounded-md bg-action text-action-foreground">
                 <PhoneCall className="size-4" />
               </div>
               <span className="font-serif text-lg font-semibold tracking-tight text-ink">CallPilot</span>
             </div>
-            <div className="flex items-center gap-2 sm:hidden">
-              <NewJobButton onNewJob={onNewJob} />
-              <ThemeToggle />
-              <AccountChip user={user} onSignOut={onSignOut} />
-            </div>
-          </div>
-          <div className="flex items-center justify-between gap-4 sm:justify-end">
-            <StageProgress current={stage} furthestReached={furthestReached} onNavigate={onNavigate} />
-            {/* Status first, then a tight cluster of icon-only utilities, then
-                the account. Keeps the bar from reading as a row of competing
-                pills. */}
-            <div className="hidden items-center gap-2.5 sm:flex">
+
+            <div className="flex items-center gap-2 sm:gap-2.5">
               <UsageChip remaining={freeUsesRemaining} />
-              <ConfigPill health={health} />
+              <span className="hidden sm:inline-flex">
+                <ConfigPill health={health} />
+              </span>
               <span className="flex items-center gap-0.5 rounded-full border border-line/70 px-1 py-0.5">
                 <NewJobButton onNewJob={onNewJob} />
                 <FeedbackLink />
@@ -60,6 +56,10 @@ export function AppShell({
               </span>
               <AccountChip user={user} onSignOut={onSignOut} />
             </div>
+          </div>
+
+          <div className="flex justify-center border-t border-line/40 py-2 sm:justify-start">
+            <StageProgress current={stage} furthestReached={furthestReached} onNavigate={onNavigate} />
           </div>
         </div>
       </header>

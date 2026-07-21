@@ -276,23 +276,41 @@ def synthesize_transcript_audio(
     client = _sdk_client()
     cp_voice = COUNTERPARTY_VOICE_IDS.get(counterparty_style or "", DEFAULT_COUNTERPARTY_VOICE)
 
+    def _convert(voice_id: str, text: str) -> bytes:
+        buf = bytearray()
+        for chunk in client.text_to_speech.convert(
+            voice_id, text=text, model_id=TTS_MODEL, output_format="mp3_44100_128"
+        ):
+            buf.extend(chunk)
+        return bytes(buf)
+
     out = bytearray()
+    first_error: Optional[str] = None
     for turn in turns[:max_turns]:
         text = (turn.get("text") or "").strip()[:max_chars_per_turn]
         if not text:
             continue
-        voice_id = AGENT_VOICE_ID if turn.get("speaker") == "agent" else cp_voice
+        is_agent = turn.get("speaker") == "agent"
+        voice_id = AGENT_VOICE_ID if is_agent else cp_voice
         try:
-            audio_iter = client.text_to_speech.convert(
-                voice_id,
-                text=text,
-                model_id=TTS_MODEL,
-                output_format="mp3_44100_128",
-            )
-            for chunk in audio_iter:
-                out.extend(chunk)
+            out.extend(_convert(voice_id, text))
         except Exception as exc:
-            raise ElevenLabsClientError(f"TTS synthesis failed mid-transcript: {exc}") from exc
+            # A counterparty voice can be unavailable on the account or plan
+            # while the agent voice works perfectly. Previously the first such
+            # failure aborted the entire transcript, so one bad voice meant no
+            # audio at all - which is exactly how "the recommendation plays but
+            # the transcript doesn't" presents. Fall back to the agent voice
+            # for that turn rather than losing the whole replay.
+            first_error = first_error or f"voice {voice_id}: {exc}"
+            if is_agent:
+                continue
+            try:
+                out.extend(_convert(AGENT_VOICE_ID, text))
+            except Exception:
+                continue
+
+    if not out and first_error:
+        raise ElevenLabsClientError(f"TTS synthesis failed: {first_error}")
 
     if not out:
         raise ElevenLabsClientError("Transcript had no speakable turns to synthesize.")
