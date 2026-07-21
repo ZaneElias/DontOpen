@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { Loader2, Mail, Lock, ArrowRight } from "lucide-react";
+import { Loader2, Mail, Lock, ArrowRight, Ticket } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 
 type Mode = "signin" | "signup";
@@ -17,6 +17,7 @@ export function AuthForm() {
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -29,8 +30,13 @@ export function AuthForm() {
       setError("Enter your email and password.");
       return;
     }
+    if (mode === "signup" && !inviteCode.trim()) {
+      setError("An invite code is required during the closed beta.");
+      return;
+    }
     setBusy(true);
-    const result = mode === "signin" ? await signIn(email, password) : await signUp(email, password);
+    const result =
+      mode === "signin" ? await signIn(email, password) : await signUp(email, password, inviteCode);
     setBusy(false);
     if (result.error) {
       setError(result.error);
@@ -82,6 +88,22 @@ export function AuthForm() {
         />
       </div>
 
+      {mode === "signup" ? (
+        <div className="cp-field flex flex-col justify-center gap-0.5 px-3.5 py-2.5">
+          <span className="flex items-center gap-1.5 text-[0.67rem] font-medium tracking-[0.02em] text-ink-muted">
+            <Ticket className="size-3" /> Invite code
+          </span>
+          <input
+            className="cp-control uppercase"
+            value={inviteCode}
+            onChange={(e) => setInviteCode(e.target.value)}
+            placeholder="CP-XXXX-XXXX"
+            autoCapitalize="characters"
+            spellCheck={false}
+          />
+        </div>
+      ) : null}
+
       {error ? <p className="text-center text-[11px] text-status-flag">{error}</p> : null}
       {notice ? <p className="text-center text-[11px] text-status-done">{notice}</p> : null}
 
@@ -129,8 +151,14 @@ export function AuthForm() {
         }}
         className="cursor-pointer text-center text-[11px] text-ink-muted underline-offset-4 hover:text-ink hover:underline"
       >
-        {mode === "signin" ? "No account? Create one" : "Already have an account? Sign in"}
+        {mode === "signin" ? "Have an invite code? Create an account" : "Already have an account? Sign in"}
       </button>
+
+      {mode === "signup" ? (
+        <p className="text-center text-[10px] leading-relaxed text-ink-muted">
+          CallPilot is in closed beta — accounts require an invite code.
+        </p>
+      ) : null}
     </form>
   );
 }

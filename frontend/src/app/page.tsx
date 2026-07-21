@@ -137,6 +137,37 @@ export default function Page() {
   if (profileLoading && !profile) {
     return null;
   }
+  if (profile && profile.privacy_accepted_at && !profile.beta_consent_accepted_at) {
+    return (
+      <ConsentGate
+        title="Before you start — this is a beta"
+        intro="A few things to know before your first comparison."
+        column="beta_consent_accepted_at"
+        confirmLabel="I understand and want to continue"
+        inlineContent={
+          <ul className="cp-prose space-y-3 text-sm leading-relaxed text-ink-muted">
+            <li>
+              <strong>This is early software.</strong> You may hit rough edges, and results won&apos;t always be
+              perfect. Please tell us when something breaks — that&apos;s the point of the beta.
+            </li>
+            <li>
+              <strong>Calls are recorded and transcribed.</strong> CallPilot&apos;s agent identifies itself as an AI
+              calling on your behalf, and the recording and transcript are kept so you can check the evidence behind
+              every quote in your report.
+            </li>
+            <li>
+              <strong>In live telephony mode it calls real businesses on your behalf.</strong> Real people answer
+              those calls. Only start a run when you actually want those calls placed.
+            </li>
+            <li>
+              <strong>Don&apos;t rely on it for anything binding.</strong> Quotes gathered here are not contracts,
+              and the agent can misunderstand. Confirm anything important directly with the business.
+            </li>
+          </ul>
+        }
+      />
+    );
+  }
   if (profile && !profile.privacy_accepted_at) {
     return (
       <ConsentGate

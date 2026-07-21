@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { PhoneCall, ShieldCheck, AlertTriangle, RotateCcw, LogOut, UserRound } from "lucide-react";
+import { PhoneCall, ShieldCheck, AlertTriangle, RotateCcw, LogOut, UserRound, MessageSquareWarning } from "lucide-react";
 import { StageProgress } from "@/components/stage-progress";
 import { ThemeToggle } from "@/components/theme-toggle";
 import type { HealthStatus, Stage } from "@/lib/types";
@@ -46,6 +46,7 @@ export function AppShell({
           <div className="flex items-center justify-between gap-4 sm:justify-end">
             <StageProgress current={stage} furthestReached={furthestReached} onNavigate={onNavigate} />
             <div className="hidden items-center gap-2 sm:flex">
+              <FeedbackLink />
               <NewJobButton onNewJob={onNewJob} />
               <ThemeToggle />
               <ConfigPill health={health} />
@@ -116,6 +117,27 @@ function AccountChip({
         <LogOut className="size-3.5" />
       </button>
     </div>
+  );
+}
+
+/**
+ * Persistent beta feedback entry point. Target comes from
+ * NEXT_PUBLIC_FEEDBACK_URL (a mailto: or form link) so it can be changed
+ * without a code edit.
+ */
+function FeedbackLink() {
+  const target = process.env.NEXT_PUBLIC_FEEDBACK_URL;
+  if (!target) return null;
+  const isExternal = /^https?:/i.test(target);
+  return (
+    <a
+      href={target}
+      {...(isExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+      title="Report an issue with the beta"
+      className="flex items-center gap-1.5 rounded-full border border-line px-2.5 py-1 text-xs font-medium text-ink-muted cp-transition hover:border-line-strong hover:text-ink"
+    >
+      <MessageSquareWarning className="size-3.5" /> Report an issue
+    </a>
   );
 }
 
