@@ -189,8 +189,8 @@ export function CallsStage({
       <div className="flex items-center gap-2 rounded-md border border-line bg-paper-raised px-3 py-2 text-xs text-ink-muted">
         <Badge variant={isSimulation ? "action" : "live"}>{isSimulation ? "Simulation" : "Telephony"}</Badge>
         {isSimulation
-          ? "Two ways to work the market, both real and both driven by the same Caller agent: live agent-to-agent voice negotiations (shown here) and outbound Twilio phone calls (CALL_MODE=telephony)."
-          : "Real outbound voice calls over Twilio/SIP, with a playable recording on each call."}
+          ? "Live agent-to-agent voice negotiations, run by the same Caller agent that places real phone calls — identical job spec either way."
+          : "Real outbound voice calls, with a playable recording on every call."}
       </div>
 
       {!health.ready_for_calls && <SetupPanel health={health} />}
@@ -219,8 +219,8 @@ export function CallsStage({
               <div className="space-y-4">
                 {isSimulation && (
                   <p className="rounded-md bg-paper px-3 py-2 text-xs text-status-live">
-                    You&apos;re in simulation mode — real businesses can be sourced here to show where the call list
-                    comes from, but placing live calls to them needs telephony mode (<code>CALL_MODE=telephony</code>).
+                    You&apos;re in simulation mode. Real businesses can be sourced here to show where the call list
+                    comes from — placing live calls to them requires telephony mode.
                   </p>
                 )}
                 {health.call_list_source !== "manual" ? (

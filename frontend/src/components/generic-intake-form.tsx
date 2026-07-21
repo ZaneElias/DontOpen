@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api, ApiError } from "@/lib/api-client";
+import { humanizeFieldList } from "@/lib/utils";
 import type { JobSpec, JobSpecSchema } from "@/lib/types";
 
 /**
@@ -93,7 +94,9 @@ export function GenericIntakeForm({
     } catch (err) {
       if (err instanceof ApiError && err.status === 422) {
         const missing = (err.body as { detail?: { missing_fields?: string[] } })?.detail?.missing_fields ?? [];
-        toast.error(`Missing required fields: ${missing.join(", ")}`);
+        toast.error("A few details are still needed", {
+          description: `Please add ${humanizeFieldList(missing)} before continuing.`,
+        });
       } else {
         toast.error(err instanceof ApiError ? err.message : "Could not confirm");
       }

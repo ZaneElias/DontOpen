@@ -28,7 +28,9 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "connect-src 'self' https://*.elevenlabs.io wss://*.elevenlabs.io https://unpkg.com blob: https://*.livekit.cloud wss://*.livekit.cloud",
+  // Supabase must be here or the browser blocks every auth/database call with
+  // a bare "TypeError: Failed to fetch" that looks like a Supabase outage.
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.elevenlabs.io wss://*.elevenlabs.io https://unpkg.com blob: https://*.livekit.cloud wss://*.livekit.cloud",
   "media-src 'self' blob: https://*.elevenlabs.io",
   "worker-src 'self' blob:",
   "frame-src 'self'",

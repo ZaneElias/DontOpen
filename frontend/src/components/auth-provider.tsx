@@ -14,6 +14,7 @@ type AuthContextValue = {
   configured: boolean;
   signIn: (email: string, password: string) => Promise<AuthResult>;
   signUp: (email: string, password: string) => Promise<AuthResult>;
+  signInWithGoogle: () => Promise<AuthResult>;
   signOut: () => Promise<void>;
 };
 
@@ -61,6 +62,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { needsEmailConfirmation: !data.session };
   }
 
+  async function signInWithGoogle(): Promise<AuthResult> {
+    // Redirects to Google, then back to the app; the session listener above
+    // picks up the resulting session. Requires the Google provider to be
+    // enabled in the Supabase dashboard.
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: typeof window !== "undefined" ? window.location.origin : undefined },
+    });
+    return error ? { error: error.message } : {};
+  }
+
   async function signOut() {
     await supabase.auth.signOut();
     setSession(null);
@@ -75,6 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         configured: supabaseConfigured,
         signIn,
         signUp,
+        signInWithGoogle,
         signOut,
       }}
     >

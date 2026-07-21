@@ -16,7 +16,7 @@ import { GenericIntakeForm } from "@/components/generic-intake-form";
 import { SectionHeader } from "@/components/ui/section";
 import { FloatingField, AnimatedCheckbox, TiltCard } from "@/components/ui/field";
 import { Stagger, StaggerItem } from "@/components/ui/motion";
-import { cn } from "@/lib/utils";
+import { cn, humanizeFieldList } from "@/lib/utils";
 import { api, ApiError } from "@/lib/api-client";
 import type { HealthStatus, JobSpec } from "@/lib/types";
 
@@ -149,7 +149,9 @@ export function BriefStage({
     } catch (err) {
       if (err instanceof ApiError && err.status === 422) {
         const missing = (err.body as { detail?: { missing_fields?: string[] } })?.detail?.missing_fields ?? [];
-        toast.error(`Missing required fields: ${missing.join(", ")}`);
+        toast.error("A few details are still needed", {
+          description: `Please add ${humanizeFieldList(missing)} before continuing.`,
+        });
       } else {
         toast.error(err instanceof ApiError ? err.message : "Could not confirm job spec");
       }
