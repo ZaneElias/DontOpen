@@ -7,3 +7,4 @@ PyYAML>=6.0.2
 openai>=1.54.0
 elevenlabs>=1.10.0
 pyjwt[crypto]>=2.9.0
+supabase
