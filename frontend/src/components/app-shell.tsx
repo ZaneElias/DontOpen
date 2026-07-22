@@ -42,7 +42,10 @@ export function AppShell({
             structurally impossible while the middle column still lands on the
             bar's true centre. */}
         <div className="mx-auto grid w-full max-w-[88rem] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 px-4 py-3 sm:px-6">
-          <div className="flex min-w-0 shrink-0 items-center gap-2.5">
+          {/* End-aligned in its column so the brand sits next to the tracker
+              rather than stranded against the far edge with a gap of dead space
+              between them. */}
+          <div className="flex min-w-0 shrink-0 items-center gap-2.5 justify-self-end pr-2 xl:pr-6">
             <div className="flex size-9 items-center justify-center rounded-lg bg-action text-action-foreground">
               <PhoneCall className="size-5" />
             </div>
