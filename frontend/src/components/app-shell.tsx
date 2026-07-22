@@ -36,8 +36,13 @@ export function AppShell({
             "Simulation ready" to wrap onto two lines. Widening the bar and
             pinning labels to a single line gives each group real breathing
             room instead of stacking them. */}
-        <div className="relative mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <div className="flex shrink-0 items-center gap-2.5">
+        {/* Three-column grid with equal, shrinkable side tracks. Absolute
+            centring put the tracker on top of the controls once both got wide;
+            in a grid the columns reserve their own space, so an overlap is
+            structurally impossible while the middle column still lands on the
+            bar's true centre. */}
+        <div className="mx-auto grid w-full max-w-7xl grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-4 py-3 sm:px-6">
+          <div className="flex min-w-0 shrink-0 items-center gap-2.5">
             <div className="flex size-9 items-center justify-center rounded-lg bg-action text-action-foreground">
               <PhoneCall className="size-5" />
             </div>
@@ -49,16 +54,14 @@ export function AppShell({
               noticeably left of the bar's actual midpoint. pointer-events are
               re-enabled only on the tracker itself so the overlay can't
               swallow clicks meant for the header. */}
-          <div className="pointer-events-none absolute inset-x-0 hidden justify-center md:flex">
-            <div className="pointer-events-auto">
-              <StageProgress current={stage} furthestReached={furthestReached} onNavigate={onNavigate} />
-            </div>
+          <div className="hidden justify-self-center md:block">
+            <StageProgress current={stage} furthestReached={furthestReached} onNavigate={onNavigate} />
           </div>
 
           {/* Kept as tight as the content allows: gap-1 between groups and a
               single hairline container around the icon buttons, so they read as
               one control cluster without any label colliding. */}
-          <div className="flex shrink-0 items-center gap-1">
+          <div className="flex shrink-0 items-center justify-end gap-1.5 justify-self-end">
             <UsageChip remaining={freeUsesRemaining} />
             <span className="hidden sm:inline-flex">
               <ConfigPill health={health} />
