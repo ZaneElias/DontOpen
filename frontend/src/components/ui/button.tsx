@@ -4,14 +4,15 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium cp-transition transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-px active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action/40",
+  "inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium cp-pop disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action/40",
   {
     variants: {
       variant: {
-        default: "bg-action text-action-foreground hover:bg-action-hover",
-        outline: "border border-line-strong bg-paper-raised text-ink hover:bg-paper",
+        default:
+          "cp-sheen bg-action text-action-foreground hover:bg-action-hover hover:shadow-[0_10px_28px_-12px_color-mix(in_srgb,var(--action)_75%,transparent)]",
+        outline: "border border-line-strong bg-paper-raised text-ink hover:bg-paper hover:border-action/45",
         ghost: "text-ink hover:bg-paper",
-        destructive: "bg-status-flag text-white hover:opacity-90",
+        destructive: "cp-sheen bg-status-flag text-white hover:opacity-90",
         link: "text-action underline-offset-4 hover:underline",
       },
       size: {

@@ -412,6 +412,83 @@ body {
   }
 }
 
+/* ── Button motion ──────────────────────────────────────────
+   Press-and-pop. The press snaps down fast; the release rides a back-out curve
+   that overshoots slightly past rest, which is what reads as a physical button
+   rebound rather than a fade.
+
+   Deliberately pure CSS: <Button asChild> renders through Radix's Slot, and a
+   motion component there would break the ref chain every dropdown and dialog
+   trigger depends on. */
+.cp-pop {
+  transition:
+    transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 220ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease,
+    opacity 160ms ease,
+    color 160ms ease;
+}
+.cp-pop:hover:not(:disabled) {
+  transform: translateY(-1.5px) scale(1.022);
+}
+.cp-pop:active:not(:disabled) {
+  transform: translateY(0) scale(0.955);
+  transition-duration: 90ms;
+}
+
+/* Specular sweep across a solid button on hover — the same light the glass
+   panels catch, moving. Only for filled variants; on ghost/link there's no
+   surface for it to travel across. */
+.cp-sheen {
+  position: relative;
+  overflow: hidden;
+}
+.cp-sheen::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -60%;
+  width: 45%;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  transform: skewX(-18deg);
+  opacity: 0;
+}
+.cp-sheen:hover:not(:disabled)::after {
+  animation: cp-sweep 720ms ease-out;
+}
+@keyframes cp-sweep {
+  0% {
+    left: -60%;
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+  }
+  100% {
+    left: 130%;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cp-pop,
+  .cp-pop:hover:not(:disabled),
+  .cp-pop:active:not(:disabled) {
+    transform: none;
+    transition: none;
+  }
+  .cp-sheen:hover:not(:disabled)::after {
+    animation: none;
+  }
+}
+
+/* Two more entrance beats — the stage cards run deeper than the original five. */
+.delay-6 { animation-delay: 0.74s; }
+.delay-7 { animation-delay: 0.88s; }
+
 /* ── Print: a clean, light, shareable report (Save as PDF) ────────────────────
    Forces a light palette regardless of theme, and hides chrome (header,
    background, audio players, buttons marked print:hidden). */

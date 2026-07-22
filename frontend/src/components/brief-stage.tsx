@@ -188,7 +188,7 @@ export function BriefStage({
       {/* Every vertical gets the voice interview — the agent reads the active
           vertical's schema at runtime, so it asks auto-repair questions on an
           auto-repair job. */}
-      <Card>
+      <Card className="animate-fade-up delay-1">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Sparkles className="size-4 text-action" /> Voice interview
@@ -206,7 +206,7 @@ export function BriefStage({
 
       {isMoving ? (
         <>
-      <Card>
+      <Card className="animate-fade-up delay-2">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Upload className="size-4 text-action" /> Upload a photo, quote, or inventory list
@@ -235,7 +235,7 @@ export function BriefStage({
       </Card>
 
       <TiltCard max={3.5}>
-      <Card>
+      <Card className="animate-fade-up delay-3">
         <CardHeader>
           <CardTitle>Move details</CardTitle>
           <CardDescription>Edit anything the interview or document upload got wrong — this is the spec that gets read to every mover.</CardDescription>

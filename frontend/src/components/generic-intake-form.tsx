@@ -5,11 +5,10 @@ import { toast } from "sonner";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { FloatingField, AnimatedCheckbox, TiltCard } from "@/components/ui/field";
+import { Stagger, StaggerItem } from "@/components/ui/motion";
 import { api, ApiError } from "@/lib/api-client";
 import { humanizeFieldList } from "@/lib/utils";
 import type { JobSpec, JobSpecSchema } from "@/lib/types";
@@ -107,87 +106,99 @@ export function GenericIntakeForm({
 
   const humanize = (k: string) => k.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
 
+  // Same treatment the moving form gets — glass fields, floating labels,
+  // cascading entrance, pointer tilt — but driven entirely off the schema, so
+  // every vertical gets it without a hand-built form.
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Job details</CardTitle>
-        <CardDescription>This becomes the exact spec every business hears — same details, every call.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-5">
-        <div className="grid gap-4 sm:grid-cols-2">
-          {Object.entries(schema).map(([key, def]) => {
-            const label = (
-              <Label className="flex items-center gap-1">
-                {humanize(key)}
-                {def.required && <span className="text-status-flag">*</span>}
-              </Label>
-            );
-            const isNotes = key.includes("notes");
-            const cell = (inner: React.ReactNode) => (
-              <div key={key} className={isNotes ? "space-y-1.5 sm:col-span-2" : "space-y-1.5"}>
-                {label}
-                {inner}
-              </div>
-            );
-            if (def.enum) {
-              return cell(
-                <Select value={String(values[key] ?? "")} onValueChange={(v) => set(key, v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={`Select ${humanize(key).toLowerCase()}`} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {def.enum.map((opt) => (
-                      <SelectItem key={opt} value={opt}>
-                        {opt.replace(/_/g, " ")}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              );
-            }
-            if (def.type === "boolean") {
-              return (
-                <label key={key} className="flex cursor-pointer items-center gap-2 self-end text-sm text-ink">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(values[key])}
-                    onChange={(e) => set(key, e.target.checked)}
-                    className="size-4 rounded border-line-strong accent-[var(--action)]"
-                  />
-                  {humanize(key)}
-                </label>
-              );
-            }
-            if (isNotes || def.type === "array") {
-              return cell(
-                <Textarea
-                  value={String(values[key] ?? "")}
-                  onChange={(e) => set(key, e.target.value)}
-                  placeholder={def.type === "array" ? "comma-separated" : def.description}
-                />
-              );
-            }
-            return cell(
-              <Input
-                type={def.type === "number" ? "number" : "text"}
-                value={String(values[key] ?? "")}
-                onChange={(e) => set(key, e.target.value)}
-                placeholder={def.example?.[0] ?? def.description ?? ""}
-              />
-            );
-          })}
-        </div>
+    <TiltCard max={3.5}>
+      <Card className="animate-fade-up delay-2">
+        <CardHeader>
+          <CardTitle>Job details</CardTitle>
+          <CardDescription>This becomes the exact spec every business hears — same details, every call.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <Stagger gap={0.04} className="grid gap-3.5 sm:grid-cols-2">
+            {Object.entries(schema).map(([key, def]) => {
+              const label = humanize(key);
+              // Free text needs the full width; so does an array, which is
+              // entered as a comma-separated list.
+              const isWide = key.includes("notes") || def.type === "array";
 
-        <div className="flex flex-wrap gap-3 pt-2">
+              if (def.type === "boolean") {
+                return (
+                  <StaggerItem key={key}>
+                    <div className="cp-field flex items-center px-4 py-3.5">
+                      <AnimatedCheckbox
+                        label={label}
+                        checked={Boolean(values[key])}
+                        onChange={(v) => set(key, v)}
+                      />
+                    </div>
+                  </StaggerItem>
+                );
+              }
+
+              const value = String(values[key] ?? "");
+              let control: React.ReactNode;
+
+              if (def.enum) {
+                control = (
+                  <Select value={value} onValueChange={(v) => set(key, v)}>
+                    <SelectTrigger className="cp-control h-auto justify-between border-0 bg-transparent shadow-none focus:ring-0">
+                      <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {def.enum.map((opt) => (
+                        <SelectItem key={opt} value={opt}>
+                          {opt.replace(/_/g, " ")}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                );
+              } else if (isWide) {
+                control = (
+                  <textarea
+                    rows={2}
+                    className="cp-control resize-none"
+                    value={value}
+                    onChange={(e) => set(key, e.target.value)}
+                    placeholder={def.type === "array" ? "comma-separated" : def.description}
+                  />
+                );
+              } else {
+                control = (
+                  <input
+                    type={def.type === "number" ? "number" : "text"}
+                    className="cp-control"
+                    value={value}
+                    onChange={(e) => set(key, e.target.value)}
+                    placeholder={def.example?.[0] ?? def.description ?? ""}
+                  />
+                );
+              }
+
+              return (
+                <StaggerItem key={key} className={isWide ? "sm:col-span-2" : undefined}>
+                  <FloatingField label={label} filled={value !== ""} required={def.required}>
+                    {control}
+                  </FloatingField>
+                </StaggerItem>
+              );
+            })}
+          </Stagger>
+
+          <div className="flex flex-wrap gap-3 pt-2">
           <Button variant="outline" onClick={handleSave} disabled={saving}>
             {saving ? <Loader2 className="size-4 animate-spin" /> : null} Save details
           </Button>
           <Button onClick={handleConfirm} disabled={confirming}>
             {confirming ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
             Confirm &amp; continue to calls
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </TiltCard>
   );
 }
