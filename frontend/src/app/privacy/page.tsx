@@ -1,9 +1,9 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { Metadata } from "next";
-import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { BackToApp } from "@/components/back-to-app";
 
 export const metadata: Metadata = {
   title: "Privacy Policy — CallPilot",
@@ -26,12 +26,7 @@ export default async function PrivacyPage() {
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-3xl px-5 py-12 sm:px-8">
-      <Link
-        href="/"
-        className="text-[11px] text-ink-muted underline-offset-4 transition-colors hover:text-ink hover:underline"
-      >
-        ← Back to CallPilot
-      </Link>
+      <BackToApp />
 
       <div className="liquid-glass backdrop-blur-xl mt-5 rounded-2xl px-6 py-8 sm:px-9 sm:py-10">
         <article className="cp-prose text-sm leading-relaxed text-ink-muted">

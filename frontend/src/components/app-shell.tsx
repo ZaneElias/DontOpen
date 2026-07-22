@@ -122,7 +122,10 @@ export function AppShell({
       {/* Always reachable after acceptance — otherwise the policy is only ever
           visible once, on the gate, and never again. */}
       <footer className="mx-auto w-full max-w-5xl px-4 pb-8 text-[11px] text-ink-muted sm:px-6 print:hidden">
-        <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline-offset-4 hover:text-ink hover:underline">
+        {/* Same-origin, so no need for rel=noopener — and keeping the opener
+            link intact is what lets the policy tab close itself on the way back
+            instead of stranding a second CallPilot tab. */}
+        <a href="/privacy" target="_blank" className="underline-offset-4 hover:text-ink hover:underline">
           Privacy Policy
         </a>
       </footer>
