@@ -24,19 +24,22 @@ export function StageProgress({
   const furthestIdx = STAGES.findIndex((s) => s.key === furthestReached);
 
   return (
-    <nav aria-label="Job progress" className="flex items-center gap-1.5">
+    // w-full + flex-1 connectors: the tracker stretches to fill whatever width
+    // it's given, so the connecting lines close the gaps either side instead of
+    // the whole group huddling in the middle.
+    <nav aria-label="Job progress" className="flex w-full items-center gap-2">
       {STAGES.map((stage, i) => {
         const isDone = i < furthestIdx;
         const isCurrent = stage.key === current;
         const isReachable = i <= furthestIdx;
         return (
-          <div key={stage.key} className="flex items-center gap-1.5">
+          <div key={stage.key} className={cn("flex items-center gap-2", i < STAGES.length - 1 && "flex-1")}>
             <button
               type="button"
               disabled={!isReachable}
               onClick={() => isReachable && onNavigate?.(stage.key)}
               className={cn(
-                "flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-medium cp-transition",
+                "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-sm font-medium cp-transition",
                 isCurrent && "border-action bg-action text-action-foreground",
                 !isCurrent && isDone && "border-status-done/30 bg-status-done-bg text-status-done hover:opacity-80",
                 !isCurrent && !isDone && isReachable && "border-line-strong bg-paper-raised text-ink hover:bg-paper",
@@ -47,7 +50,7 @@ export function StageProgress({
               <span className="hidden sm:inline">{stage.label}</span>
             </button>
             {i < STAGES.length - 1 && (
-              <div className={cn("h-px w-3", i < currentIdx || i < furthestIdx ? "bg-status-done/40" : "bg-line-strong")} />
+              <div className={cn("h-px min-w-3 flex-1", i < currentIdx || i < furthestIdx ? "bg-status-done/40" : "bg-line-strong")} />
             )}
           </div>
         );

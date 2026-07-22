@@ -63,7 +63,9 @@ export function AppShell({
           {/* Inline only from xl. Below that the three groups genuinely cannot
               fit on one line, and forcing them to is what made "4 Report" run
               into the usage chip - it drops to its own row instead. */}
-          <div className="hidden justify-self-center lg:block">
+          {/* Full width of the middle column so the tracker can stretch into
+              the space either side of it. */}
+          <div className="hidden w-full lg:block">
             <StageProgress current={stage} furthestReached={furthestReached} onNavigate={onNavigate} />
           </div>
 
