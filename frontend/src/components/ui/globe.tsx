@@ -7,13 +7,16 @@ type LatLng = [number, number];
 
 /**
  * Decorative auto-rotating globe (cobe) themed to CallPilot's warm-paper /
- * blue palette. Renders the origin + a spray of destination markers with arcs
- * — "one agent, the whole market", the product thesis as a visual. Purely
- * presentational; no interaction, so it stays cheap and robust.
+ * blue palette. Purely presentational; no interaction, so it stays cheap and
+ * robust.
+ *
+ * Markers default to none — the blue dots read as real data rather than
+ * decoration, which they aren't. Callers can still pass their own if a genuine
+ * set of locations ever needs plotting.
  */
 export function Globe({
   className = "",
-  markers = DEFAULT_MARKERS,
+  markers = [],
 }: {
   className?: string;
   markers?: LatLng[];
@@ -78,15 +81,3 @@ export function Globe({
     </div>
   );
 }
-
-// Rock Hill / Charlotte area origin + a spread of US metros = "the market".
-const DEFAULT_MARKERS: LatLng[] = [
-  [35.0, -81.0], // Rock Hill / Charlotte
-  [33.749, -84.388], // Atlanta
-  [40.7128, -74.006], // NYC
-  [41.8781, -87.6298], // Chicago
-  [29.7604, -95.3698], // Houston
-  [34.0522, -118.2437], // LA
-  [39.7392, -104.9903], // Denver
-  [47.6062, -122.3321], // Seattle
-];
