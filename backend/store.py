@@ -124,10 +124,22 @@ def list_quotes(access_token: str, job_id: str) -> List[Quote]:
 
 # ── usage limit (Part 4) ───────────────────────────────────────────────
 
-def consume_free_use(access_token: str) -> bool:
-    """Atomically spend one free use. False when the user has none left."""
-    res = client_for(access_token).rpc("consume_free_use", {}).execute()
+def consume_free_use_for_job(access_token: str, job_id: str) -> bool:
+    """Spend this job's single free use, once. False when the user has none left.
+
+    Idempotent per job: the second and later calls for a job already charged
+    return True without decrementing, so negotiating or re-running calls on the
+    same job is free. See migration 0007.
+    """
+    res = client_for(access_token).rpc("consume_free_use_for_job", {"p_job_id": job_id}).execute()
     return bool(res.data)
+
+
+def free_uses_remaining(access_token: str) -> Optional[int]:
+    """Read-only balance check. None when it can't be determined."""
+    res = client_for(access_token).table("profiles").select("free_uses_remaining").limit(1).execute()
+    rows = res.data or []
+    return rows[0].get("free_uses_remaining") if rows else None
 
 
 # ── webhook writes (no user session) ───────────────────────────────────────

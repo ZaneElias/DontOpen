@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SetupPanel } from "@/components/setup-panel";
 import { SectionHeader } from "@/components/ui/section";
 import { AuthedAudio } from "@/components/ui/authed-audio";
+import { useAuth } from "@/components/auth-provider";
 import { api, ApiError } from "@/lib/api-client";
 import { usePolling } from "@/hooks/use-polling";
 import { cn } from "@/lib/utils";
@@ -53,6 +54,7 @@ export function CallsStage({
 }) {
   const [mode, setMode] = useState<"demo" | "real">("demo");
   const [draftTargets, setDraftTargets] = useState<DraftTarget[]>([]);
+  const { refreshProfile } = useAuth();
   const [starting, setStarting] = useState(false);
   const [started, setStarted] = useState(false);
 
@@ -173,6 +175,10 @@ export function CallsStage({
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Failed to start calls");
     } finally {
+      // The free use is spent here, not at job creation, so the header chip is
+      // stale until we re-read the profile. Also runs on failure: a 402 means
+      // the balance is what changed.
+      void refreshProfile();
       setStarting(false);
     }
   }

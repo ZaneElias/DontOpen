@@ -148,8 +148,15 @@ changes how a call is placed, not who is contacted or what is said. See
 - Both block app access until accepted, and both offer a sign-out escape
 
 ### Limits
-- **4 free comparisons per account**, spent per *new job* (not per API call) and
-  decremented atomically so two concurrent creations can't both take the last one
+- **4 free comparisons per account**, spent when calls actually start — not when
+  a job is created. Browsing verticals, refreshing, or abandoning a half-filled
+  brief costs nothing; you're only charged once work runs
+- Charged **per job**, recorded in Postgres, so negotiation, the report, and any
+  re-run on that same job ride on the one use. The claim is a primary-key insert,
+  so two concurrent "start calls" clicks can't both decrement
+- The already-charged flag lives in its own table with **no insert/update/delete
+  policy** — putting it on `jobs` (which users can update) would have let anyone
+  grant themselves unlimited runs with the anon key
 - Usage chip in the header warns before the limit, not at it
 - **Monthly budget ceiling** (`MONTHLY_BUDGET_USD`) tracked against estimated
   spend. At the cap, new calls are blocked app-wide with a clear message rather

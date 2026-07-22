@@ -41,6 +41,13 @@ you just paste the secret values.)*
 4. **Environment Variables:** add **`BACKEND_URL`** = your Render URL from A6 (no trailing slash).
 5. **Deploy.** Open the Vercel URL — that's your live CallPilot.
 
+## Database migrations
+
+Run every file in `supabase/migrations/` in order, in the Supabase SQL editor. They're
+idempotent, so re-running a file you've already applied is safe. `0007_charge_on_calls.sql`
+is what makes free uses charge at call time instead of job creation — without it the app
+still works, but nothing is metered.
+
 ## After deploy
 
 - **Warm it up before you demo/show it:** on the free tier the backend sleeps after ~15 min idle, so the first

@@ -338,6 +338,32 @@ _IMAGE_MAGIC_OK = (
 )
 
 
+def _charge_free_use(job_id: str, request: Request) -> None:
+    """Spend this job's free use, at the moment work that costs money starts.
+
+    Charged per JOB rather than per click: the first call-placing action on a
+    job pays for it, and everything downstream on that same job — negotiation,
+    the report, a re-run — is free. Idempotency lives in Postgres (migration
+    0007), not here, so it holds across backend restarts and concurrent clicks.
+    """
+    token = getattr(request.state, "access_token", None)
+    if not (store.store_configured() and token):
+        return  # unauthenticated/local mode meters nothing
+    try:
+        allowed = store.consume_free_use_for_job(token, job_id)
+    except Exception as exc:  # a metering hiccup must not block a paid-for run
+        logger.warning("free-use charge failed, allowing: %s", exc)
+        return
+    if not allowed:
+        raise HTTPException(
+            status_code=402,
+            detail={
+                "error": "free_uses_exhausted",
+                "message": "You've used all your free comparisons on this account.",
+            },
+        )
+
+
 def _enforce_budget() -> None:
     """Block work that costs money once the monthly ceiling is reached.
 
@@ -450,15 +476,20 @@ def create_intake(body: IntakeCreateRequest, request: Request) -> JobSpec:
     token = getattr(request.state, "access_token", None)
     persistent = store.store_configured() and bool(token and user_id)
 
-    # Usage limit is spent per NEW JOB, not per API call, and is decremented
-    # atomically in Postgres so two concurrent creates can't both take the last one.
+    # Creating a job is FREE. Switching verticals, refreshing, or abandoning a
+    # half-filled brief all land here, and charging for those burned uses on
+    # work that never ran. The use is spent in _charge_free_use() at the first
+    # call-placing action instead.
+    #
+    # This is only a read: block the user at zero so they don't fill out a whole
+    # brief before finding out, but take nothing from them for looking.
     if persistent:
         try:
-            allowed = store.consume_free_use(token)
+            remaining = store.free_uses_remaining(token)
         except Exception as exc:  # never let a metering hiccup hard-fail intake
-            logger.warning("free-use check failed, allowing: %s", exc)
-            allowed = True
-        if not allowed:
+            logger.warning("free-use balance check failed, allowing: %s", exc)
+            remaining = None
+        if remaining is not None and remaining <= 0:
             raise HTTPException(
                 status_code=402,
                 detail={
@@ -712,7 +743,7 @@ def counterparty_roster(vertical: str = "moving") -> List[Dict[str, Any]]:
 
 
 @app.post("/calls/{job_id}/start")
-async def start_calls(job_id: str, body: CallStartRequest) -> List[CallRecord]:
+async def start_calls(job_id: str, body: CallStartRequest, request: Request) -> List[CallRecord]:
     job = _job_or_404(job_id)
     if not job.confirmed:
         raise HTTPException(
@@ -749,6 +780,11 @@ async def start_calls(job_id: str, body: CallStartRequest) -> List[CallRecord]:
             )
         resolved_targets.append(CallTarget(company_name=t.company_name, phone_number=phone, negotiation_style_label=t.negotiation_style_label))
     body = CallStartRequest(targets=resolved_targets)
+
+    # Charge last: every rejection above (unconfirmed job, too few targets,
+    # missing phone, calling not configured) means no call was placed, and a
+    # request that never ran must not cost a use.
+    _charge_free_use(job_id, request)
 
     agent_id = os.environ["ELEVENLABS_CALLER_AGENT_ID"]
     phone_number_id = os.environ["ELEVENLABS_CALLER_PHONE_NUMBER_ID"]
@@ -1277,6 +1313,10 @@ async def simulate_calls(job_id: str, body: SimulateCallsRequest, request: Reque
                 "available": list(vconfig.get("counterparty_styles", {}).keys()),
             },
         )
+
+    # Charge last, once every rejection path above is cleared — a 422/503 means
+    # nothing ran, so it must not cost a use.
+    _charge_free_use(job_id, request)
 
     caller_agent_id = os.environ["ELEVENLABS_CALLER_AGENT_ID"]
     call_context = job.as_call_context()
