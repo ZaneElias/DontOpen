@@ -5,9 +5,9 @@ Deliverables checklist for **projects.hack-nation.ai** and how each is satisfied
 | Item | Status | Notes |
 |---|---|---|
 | Project Summary (150–300 words) | Ready | See `PROJECT_SUMMARY.md` — paste into the form. |
-| Demo Video | Record | Script below. |
-| Tech Video | Record | Talking points below. |
-| Team Video | Record | Who you are / why this. |
+| Demo Video | Done | Recorded and submitted. Script kept below for reference. |
+| Tech Video | Done | Recorded and submitted. Talking points kept below for reference. |
+| Team Video | Done | Recorded and submitted. |
 | GitHub Repository (public) | Done | https://github.com/ZaneElias/DontOpen |
 | Zipped Code | Done | `callpilot-submission.zip` (source only, no secrets/deps). |
 | Dataset | N/A (grounded, not trained) | Price benchmarks in `backend/configs/moving.yaml` (FMCSA + moveBuddha); call list sourced live via Tavily. No trained dataset. |
