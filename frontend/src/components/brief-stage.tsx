@@ -36,6 +36,17 @@ type FormState = {
   special_handling_notes: string;
 };
 
+/**
+ * Today in the user's own timezone, as YYYY-MM-DD.
+ *
+ * toISOString() alone would give UTC, which is the wrong day for anyone west of
+ * Greenwich in the evening - and would let them pick "yesterday" locally.
+ */
+function todayISO(): string {
+  const now = new Date();
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+}
+
 function jobToForm(job: JobSpec): FormState {
   const f = job.fields;
   return {
@@ -239,11 +250,21 @@ export function BriefStage({
               <FloatingField label="Move date" filled={!!form.move_date} badge={<ProvenanceBadge source={provenance.move_date} />}>
                 <input
                   type="date"
+                  // A move can't be scheduled in the past, and a past date
+                  // would send movers a nonsensical job spec.
+                  min={todayISO()}
                   className={cn("cp-control", !form.move_date && "text-transparent focus:text-ink")}
                   value={form.move_date}
                   onChange={(e) => set("move_date", e.target.value)}
                 />
               </FloatingField>
+              {/* `min` only constrains the picker; a past date can still arrive
+                  by typing or from document extraction, so flag it explicitly. */}
+              {form.move_date && form.move_date < todayISO() ? (
+                <p className="mt-1.5 px-1 text-[11px] text-status-flag">
+                  That date has already passed — pick a future move date.
+                </p>
+              ) : null}
             </StaggerItem>
             <StaggerItem>
               <FloatingField label="Bedrooms" filled={!!form.bedrooms} badge={<ProvenanceBadge source={provenance.bedrooms} />}>
