@@ -10,8 +10,8 @@ Vercel's serverless functions aren't. Do the **backend first** (you need its URL
 
 ## Part A — Backend on Render
 
-1. Go to **render.com**, sign up with **GitHub**, authorize access to the `Negotiate` repo.
-2. **New +** → **Web Service** → pick **`ZaneElias/Negotiate`**.
+1. Go to **render.com**, sign up with **GitHub**, authorize access to the `DontOpen` repo.
+2. **New +** → **Web Service** → pick **`ZaneElias/DontOpen`**.
 3. Settings:
    - **Root Directory:** `backend`
    - **Runtime:** Python 3
@@ -36,7 +36,7 @@ you just paste the secret values.)*
 ## Part B — Frontend on Vercel
 
 1. Go to **vercel.com**, sign up with **GitHub**.
-2. **Add New… → Project** → import **`ZaneElias/Negotiate`**.
+2. **Add New… → Project** → import **`ZaneElias/DontOpen`**.
 3. **Root Directory:** click **Edit** → select **`frontend`**. (Framework auto-detects as Next.js.)
 4. **Environment Variables:** add **`BACKEND_URL`** = your Render URL from A6 (no trailing slash).
 5. **Deploy.** Open the Vercel URL — that's your live CallPilot.

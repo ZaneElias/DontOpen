@@ -87,7 +87,7 @@ Open http://localhost:3000 and screen-record while you do this. Read the **voice
 | Demo Video | Your screen recording (section 4) |
 | Tech Video | Your code walkthrough (section 5) |
 | Team Video | Your intro |
-| GitHub Repository | **https://github.com/ZaneElias/Negotiate** |
+| GitHub Repository | **https://github.com/ZaneElias/DontOpen** |
 | Zipped Code | **`C:\Users\zanel\Downloads\callpilot-submission.zip`** |
 | Dataset | **N/A** — grounded in public FMCSA/moveBuddha price benchmarks + live Tavily search; no trained dataset |
 

@@ -8,7 +8,7 @@ Deliverables checklist for **projects.hack-nation.ai** and how each is satisfied
 | Demo Video | Record | Script below. |
 | Tech Video | Record | Talking points below. |
 | Team Video | Record | Who you are / why this. |
-| GitHub Repository (public) | Done | https://github.com/ZaneElias/Negotiate |
+| GitHub Repository (public) | Done | https://github.com/ZaneElias/DontOpen |
 | Zipped Code | Done | `callpilot-submission.zip` (source only, no secrets/deps). |
 | Dataset | N/A (grounded, not trained) | Price benchmarks in `backend/configs/moving.yaml` (FMCSA + moveBuddha); call list sourced live via Tavily. No trained dataset. |
 
