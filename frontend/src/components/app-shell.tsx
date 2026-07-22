@@ -41,7 +41,7 @@ export function AppShell({
             in a grid the columns reserve their own space, so an overlap is
             structurally impossible while the middle column still lands on the
             bar's true centre. */}
-        <div className="mx-auto grid w-full max-w-7xl grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-4 py-3 sm:px-6">
+        <div className="mx-auto grid w-full max-w-[88rem] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 px-4 py-3 sm:px-6">
           <div className="flex min-w-0 shrink-0 items-center gap-2.5">
             <div className="flex size-9 items-center justify-center rounded-lg bg-action text-action-foreground">
               <PhoneCall className="size-5" />
@@ -54,7 +54,10 @@ export function AppShell({
               noticeably left of the bar's actual midpoint. pointer-events are
               re-enabled only on the tracker itself so the overlay can't
               swallow clicks meant for the header. */}
-          <div className="hidden justify-self-center md:block">
+          {/* Inline only from xl. Below that the three groups genuinely cannot
+              fit on one line, and forcing them to is what made "4 Report" run
+              into the usage chip - it drops to its own row instead. */}
+          <div className="hidden justify-self-center xl:block">
             <StageProgress current={stage} furthestReached={furthestReached} onNavigate={onNavigate} />
           </div>
 
@@ -77,7 +80,7 @@ export function AppShell({
 
         {/* Tracker only drops below the bar on narrow screens, where it genuinely
             cannot fit alongside everything else. */}
-        <div className="flex justify-center border-t border-line/40 px-4 py-2 md:hidden">
+        <div className="flex justify-center border-t border-line/40 px-4 py-2 xl:hidden">
           <StageProgress current={stage} furthestReached={furthestReached} onNavigate={onNavigate} />
         </div>
       </header>
