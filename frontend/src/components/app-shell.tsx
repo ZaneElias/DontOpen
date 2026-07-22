@@ -41,11 +41,14 @@ export function AppShell({
             in a grid the columns reserve their own space, so an overlap is
             structurally impossible while the middle column still lands on the
             bar's true centre. */}
-        <div className="mx-auto grid w-full max-w-[88rem] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 px-4 py-3 sm:px-6">
+        {/* Same max-width and padding as <main> below, so the brand lines up
+            with the content's left edge and the controls with its right edge
+            instead of floating wider than the page. */}
+        <div className="mx-auto grid w-full max-w-5xl grid-cols-[auto_1fr_auto] items-center gap-4 px-4 py-3 sm:px-6">
           {/* End-aligned in its column so the brand sits next to the tracker
               rather than stranded against the far edge with a gap of dead space
               between them. */}
-          <div className="flex min-w-0 shrink-0 items-center gap-2.5 justify-self-end pr-2 xl:pr-6">
+          <div className="flex min-w-0 shrink-0 items-center gap-2.5 justify-self-start">
             <div className="flex size-9 items-center justify-center rounded-lg bg-action text-action-foreground">
               <PhoneCall className="size-5" />
             </div>
@@ -60,7 +63,7 @@ export function AppShell({
           {/* Inline only from xl. Below that the three groups genuinely cannot
               fit on one line, and forcing them to is what made "4 Report" run
               into the usage chip - it drops to its own row instead. */}
-          <div className="hidden justify-self-center xl:block">
+          <div className="hidden justify-self-center lg:block">
             <StageProgress current={stage} furthestReached={furthestReached} onNavigate={onNavigate} />
           </div>
 
@@ -70,7 +73,7 @@ export function AppShell({
           {/* Start-aligned, mirroring the brand column, so the controls sit
               beside the tracker instead of being flung to the far edge — the
               whole bar then reads as one centred group. */}
-          <div className="flex shrink-0 items-center gap-1.5 justify-self-start pl-2 xl:pl-6">
+          <div className="flex shrink-0 items-center gap-1.5 justify-self-end">
             <UsageChip remaining={freeUsesRemaining} />
             <span className="hidden sm:inline-flex">
               <ConfigPill health={health} />
@@ -86,7 +89,7 @@ export function AppShell({
 
         {/* Tracker only drops below the bar on narrow screens, where it genuinely
             cannot fit alongside everything else. */}
-        <div className="flex justify-center border-t border-line/40 px-4 py-2 xl:hidden">
+        <div className="flex justify-center border-t border-line/40 px-4 py-2 lg:hidden">
           <StageProgress current={stage} furthestReached={furthestReached} onNavigate={onNavigate} />
         </div>
       </header>
@@ -226,7 +229,7 @@ function ConfigPill({ health }: { health: HealthStatus | null }) {
     return <span className="text-xs text-ink-muted">Checking setup…</span>;
   }
   const ready = health.ready_for_calls;
-  const readyLabel = health.call_mode === "telephony" ? "Live calls ready" : "Simulation ready";
+  const readyLabel = health.call_mode === "telephony" ? "Live" : "Ready";
   return (
     <div
       className={cn(
@@ -236,11 +239,9 @@ function ConfigPill({ health }: { health: HealthStatus | null }) {
       title={ready ? `All required ${health.call_mode} configuration is present.` : `${health.missing_required_count} required setting(s) missing.`}
     >
       {ready ? <ShieldCheck className="size-3.5" /> : <AlertTriangle className="size-3.5" />}
-      {/* Full wording only where there's room; the icon + tooltip carry it otherwise. */}
-      <span className="hidden lg:inline">
-        {ready ? readyLabel : `${health.missing_required_count} setting${health.missing_required_count === 1 ? "" : "s"} needed`}
-      </span>
-      <span className="lg:hidden">{ready ? "Ready" : health.missing_required_count}</span>
+      {/* Short form always: the full wording is what pushed this row past the
+          content width. The tooltip carries the detail. */}
+      {ready ? readyLabel : `${health.missing_required_count} needed`}
     </div>
   );
 }
