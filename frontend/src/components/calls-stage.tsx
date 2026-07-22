@@ -223,18 +223,39 @@ export function CallsStage({
               <Button variant={mode === "real" ? "default" : "outline"} size="sm" onClick={() => setMode("real")}>
                 Real businesses
               </Button>
+              {mode === "real" && health.call_list_source !== "manual" ? (
+                <span className="self-center text-[11px] text-ink-muted">
+                  sourced live via {health.call_list_source}
+                </span>
+              ) : null}
             </div>
 
             {mode === "demo" && (
-              <DemoPersonaPicker onAdd={addDemoPersona} draftTargets={draftTargets} vertical={job.vertical} />
+              <div className="space-y-3">
+                <DemoPersonaPicker onAdd={addDemoPersona} draftTargets={draftTargets} vertical={job.vertical} />
+                {/* The demo personas are invented companies. Real, searchable
+                    businesses work in simulation too, which wasn't discoverable
+                    from this tab. */}
+                <p className="text-xs text-ink-muted">
+                  These are scripted stand-ins with invented names.{" "}
+                  <button
+                    type="button"
+                    onClick={() => setMode("real")}
+                    className="cursor-pointer font-medium text-action underline-offset-4 hover:underline"
+                  >
+                    Use real businesses instead
+                  </button>{" "}
+                  to negotiate with actual companies near you, by name.
+                </p>
+              </div>
             )}
 
             {mode === "real" && (
               <div className="space-y-4">
                 {isSimulation && (
                   <p className="rounded-md bg-paper px-3 py-2 text-xs text-status-live">
-                    You&apos;re in simulation mode. Real businesses can be sourced here to show where the call list
-                    comes from — placing live calls to them requires telephony mode.
+                    Add real businesses and your agent negotiates with each one <span className="font-medium">by name</span> —
+                    still a simulation, so no phone rings. Telephony mode dials this exact list for real.
                   </p>
                 )}
                 {health.call_list_source !== "manual" ? (
