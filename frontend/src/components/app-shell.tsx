@@ -36,7 +36,7 @@ export function AppShell({
             "Simulation ready" to wrap onto two lines. Widening the bar and
             pinning labels to a single line gives each group real breathing
             room instead of stacking them. */}
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+        <div className="relative mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <div className="flex shrink-0 items-center gap-2.5">
             <div className="flex size-9 items-center justify-center rounded-lg bg-action text-action-foreground">
               <PhoneCall className="size-5" />
@@ -44,8 +44,15 @@ export function AppShell({
             <span className="font-serif text-xl font-semibold tracking-tight text-ink">CallPilot</span>
           </div>
 
-          <div className="hidden flex-1 justify-center md:flex">
-            <StageProgress current={stage} furthestReached={furthestReached} onNavigate={onNavigate} />
+          {/* Absolutely centred rather than flexed into the gap: the control
+              cluster is far wider than the logo, so an in-flow centre lands
+              noticeably left of the bar's actual midpoint. pointer-events are
+              re-enabled only on the tracker itself so the overlay can't
+              swallow clicks meant for the header. */}
+          <div className="pointer-events-none absolute inset-x-0 hidden justify-center md:flex">
+            <div className="pointer-events-auto">
+              <StageProgress current={stage} furthestReached={furthestReached} onNavigate={onNavigate} />
+            </div>
           </div>
 
           {/* Kept as tight as the content allows: gap-1 between groups and a
