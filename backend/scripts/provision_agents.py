@@ -118,6 +118,12 @@ class EL:
             raise RuntimeError(f"POST {path} → {r.status_code}: {r.text[:500]}")
         return r.json()
 
+    def _patch(self, path: str, body: Dict[str, Any]) -> Dict[str, Any]:
+        r = self.client.patch(f"{BASE_URL}{path}", headers=self.h, json=body)
+        if r.status_code >= 400:
+            raise RuntimeError(f"PATCH {path} → {r.status_code}: {r.text[:500]}")
+        return r.json()
+
     # tools
     def find_tool(self, name: str) -> Optional[str]:
         data = self._get("/tools")
@@ -156,10 +162,6 @@ class EL:
         if self.dry_run:
             print(f"  ↳ [dry-run] would create agent '{name}' (llm={llm}, tools={tool_ids})")
             return f"<{name}-id>"
-        existing = self.find_agent(name)
-        if existing:
-            print(f"  ↳ agent '{name}' already exists ({existing}) — reusing")
-            return existing
         body = {
             "name": name,
             "conversation_config": {
@@ -173,6 +175,14 @@ class EL:
                 },
             },
         }
+        # Reusing an existing agent isn't enough — the prompts/*.md files are the
+        # source of truth, so a re-run must push edits to the live agent too.
+        # Without this, editing a prompt file silently changed nothing.
+        existing = self.find_agent(name)
+        if existing:
+            self._patch(f"/agents/{existing}", body)
+            print(f"  ↳ agent '{name}' already exists ({existing}) — prompt synced")
+            return existing
         resp = self._post("/agents/create", body)
         aid = resp.get("agent_id")
         print(f"  ↳ created agent '{name}' → {aid}")
@@ -298,8 +308,11 @@ def main() -> int:
 
     if not args.no_interview:
         print("\n3) Estimator interview agent")
-        interview_first = ("Hi, I'm CallPilot's intake assistant — I'll ask a few questions about your move "
-                           "so I can get you accurate quotes. This takes about three minutes. Ready?")
+        # {{vertical_display}} is supplied per-session by the browser widget, so
+        # one agent greets a move and a brake job correctly.
+        interview_first = ("Hi, I'm CallPilot's intake assistant — I'll ask a few questions about your "
+                           "{{vertical_display}} so I can get you accurate quotes. "
+                           "This takes about three minutes. Ready?")
         interview_id = el.create_agent(
             INTERVIEW_AGENT_NAME, read_prompt("prompts/interview_agent.md"),
             interview_first, args.llm, [intake_tool_id],

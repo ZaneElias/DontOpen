@@ -80,6 +80,7 @@ export function BriefStage({
   onSwitchVertical: (vertical: string) => void;
 }) {
   const isMoving = job.vertical === "moving";
+  const verticalDisplay = isMoving ? "move" : job.vertical.replace(/_/g, " ");
   const [form, setForm] = useState<FormState>(() => jobToForm(job));
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -184,19 +185,24 @@ export function BriefStage({
         right={<VerticalPicker current={job.vertical} onSwitch={onSwitchVertical} />}
       />
 
-      {isMoving && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Sparkles className="size-4 text-action" /> Voice interview
-            </CardTitle>
-            <CardDescription>Talk through your move — takes about three minutes.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <VoiceIntakeWidget agentId={health?.interview_agent_id ?? null} jobId={job.job_id} />
-          </CardContent>
-        </Card>
-      )}
+      {/* Every vertical gets the voice interview — the agent reads the active
+          vertical's schema at runtime, so it asks auto-repair questions on an
+          auto-repair job. */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="size-4 text-action" /> Voice interview
+          </CardTitle>
+          <CardDescription>Talk through your {verticalDisplay} — takes about three minutes.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <VoiceIntakeWidget
+            agentId={health?.interview_agent_id ?? null}
+            jobId={job.job_id}
+            verticalDisplay={verticalDisplay}
+          />
+        </CardContent>
+      </Card>
 
       {isMoving ? (
         <>
