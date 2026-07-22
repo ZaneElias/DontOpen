@@ -66,6 +66,17 @@ CALL_MODE = telephony
 Anything unrecognised falls back to `simulation`, so a typo can't accidentally
 start spending money.
 
+**This alone will not place calls.** Live calls stay blocked until you also set:
+
+```
+TELEPHONY_CONSENT_REVIEWED = true
+```
+
+That second flag exists on purpose. Setting it is you stating that the
+call-recording consent question below has actually been answered — not that you
+read past it. Until then the backend refuses live calls with a message pointing
+here. Simulation is unaffected.
+
 ### Step 2 — (recommended) enable live quote capture
 
 ```

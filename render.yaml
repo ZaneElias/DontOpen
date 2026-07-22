@@ -36,6 +36,11 @@ services:
       - key: ELEVENLABS_AGENT_LLM
         value: gpt-4.1
       # Telephony only (leave unset for simulation mode):
+      # Live calls stay blocked until this is explicitly set to "true", even with
+      # CALL_MODE=telephony — see TELEPHONY.md. It records that the call-recording
+      # consent question has actually been answered, not just noted.
+      - key: TELEPHONY_CONSENT_REVIEWED
+        sync: false
       - key: ELEVENLABS_CALLER_PHONE_NUMBER_ID
         sync: false
       - key: WEBHOOK_BASE_URL

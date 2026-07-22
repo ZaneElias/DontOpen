@@ -263,6 +263,15 @@ def require_simulation_config() -> None:
         )
 
 
+def telephony_consent_acknowledged() -> bool:
+    """Whether the call-recording consent question has been explicitly settled.
+
+    Set TELEPHONY_CONSENT_REVIEWED=true only after deciding how consent to
+    record is obtained from the *called party*. See TELEPHONY.md.
+    """
+    return os.environ.get("TELEPHONY_CONSENT_REVIEWED", "").strip().lower() == "true"
+
+
 def require_calling_config() -> None:
     """Raise if real telephony can't run. Import-time-safe: callers catch and
     convert to HTTP 503."""
@@ -272,4 +281,18 @@ def require_calling_config() -> None:
         raise RuntimeError(
             f"Cannot place live calls: missing required configuration ({names}). "
             f"See /api/health for details on each."
+        )
+
+    # Deliberate friction. Every live call records a third party who is not a
+    # user of this product and has not agreed to its terms; in all-party-consent
+    # states the agent announcing that it is an AI does not substitute for
+    # consent to be recorded. Flipping CALL_MODE alone must not be enough to
+    # start calling real people - that decision has to be made on purpose.
+    if not telephony_consent_acknowledged():
+        raise RuntimeError(
+            "Telephony is configured but blocked: the call-recording consent question "
+            "has not been marked as resolved. Live calls record third parties who never "
+            "agreed to these terms, and AI disclosure is not recording consent in "
+            "all-party-consent states. Decide how consent is obtained (see TELEPHONY.md), "
+            "then set TELEPHONY_CONSENT_REVIEWED=true to unblock."
         )
