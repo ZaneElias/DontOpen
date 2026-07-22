@@ -67,7 +67,10 @@ export function AppShell({
           {/* Kept as tight as the content allows: gap-1 between groups and a
               single hairline container around the icon buttons, so they read as
               one control cluster without any label colliding. */}
-          <div className="flex shrink-0 items-center justify-end gap-1.5 justify-self-end">
+          {/* Start-aligned, mirroring the brand column, so the controls sit
+              beside the tracker instead of being flung to the far edge — the
+              whole bar then reads as one centred group. */}
+          <div className="flex shrink-0 items-center gap-1.5 justify-self-start pl-2 xl:pl-6">
             <UsageChip remaining={freeUsesRemaining} />
             <span className="hidden sm:inline-flex">
               <ConfigPill health={health} />
