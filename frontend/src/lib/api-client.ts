@@ -80,6 +80,11 @@ export const api = {
     return request<JobSpec>(`/intake/${jobId}/document`, { method: "POST", body: form });
   },
 
+  suggestPlaces: (q: string) =>
+    request<{ label: string; name: string; state: string | null; country: string | null; type: string }[]>(
+      `/intake/place-suggest?q=${encodeURIComponent(q)}`
+    ),
+
   confirmIntake: (jobId: string) => request<JobSpec>(`/intake/${jobId}/confirm`, { method: "POST" }),
 
   searchCallList: (category: string, location: string, maxResults = 8) =>

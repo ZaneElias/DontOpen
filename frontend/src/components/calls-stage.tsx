@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SetupPanel } from "@/components/setup-panel";
 import { SectionHeader } from "@/components/ui/section";
 import { AuthedAudio } from "@/components/ui/authed-audio";
+import { PlaceAutocomplete } from "@/components/ui/place-autocomplete";
 import { useAuth } from "@/components/auth-provider";
 import { api, ApiError } from "@/lib/api-client";
 import { usePolling } from "@/hooks/use-polling";
@@ -273,7 +274,16 @@ export function CallsStage({
                   <div className="space-y-3">
                     <div className="flex flex-col gap-2 sm:flex-row">
                       <Input value={searchCategory} onChange={(e) => setSearchCategory(e.target.value)} placeholder="moving companies" />
-                      <Input value={searchLocation} onChange={(e) => setSearchLocation(e.target.value)} placeholder="Charlotte, NC" />
+                      {/* Same pick-a-place control as the brief: a nonsense
+                          location here is what made Search look broken. */}
+                      <div className="flex-1">
+                        <PlaceAutocomplete
+                          value={searchLocation}
+                          onChange={setSearchLocation}
+                          placeholder="Charlotte, NC"
+                          className="h-9 rounded-md border border-line-strong bg-paper-raised px-3 py-1 text-sm shadow-sm"
+                        />
+                      </div>
                       <Button className="shrink-0" onClick={handleSearch} disabled={searching}>
                         {searching ? <Loader2 className="size-4 animate-spin" /> : <Search className="size-4" />}
                         Search

@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { FloatingField, AnimatedCheckbox, TiltCard } from "@/components/ui/field";
 import { Stagger, StaggerItem } from "@/components/ui/motion";
+import { PlaceAutocomplete } from "@/components/ui/place-autocomplete";
 import { api, ApiError } from "@/lib/api-client";
 import { humanizeFieldList } from "@/lib/utils";
 import type { JobSpec, JobSpecSchema } from "@/lib/types";
@@ -164,6 +165,16 @@ export function GenericIntakeForm({
                     value={value}
                     onChange={(e) => set(key, e.target.value)}
                     placeholder={def.type === "array" ? "comma-separated" : def.description}
+                  />
+                );
+              } else if (def.is_location) {
+                // Schema-driven: any vertical marking a field is_location gets
+                // the same pick-a-place control with no code change here.
+                control = (
+                  <PlaceAutocomplete
+                    value={value}
+                    onChange={(v) => set(key, v)}
+                    placeholder={def.example?.[0] ?? def.description ?? ""}
                   />
                 );
               } else {

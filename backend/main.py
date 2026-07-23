@@ -55,6 +55,7 @@ from schema import (
 from services import call_list as call_list_service
 from services import elevenlabs_client
 from services import location
+from services import places
 from services import openai_client
 
 logger = logging.getLogger("callpilot")
@@ -675,6 +676,14 @@ async def intake_document(job_id: str, file: UploadFile = File(...)) -> JobSpec:
         if note not in job.needs_review:
             job.needs_review.append(note)
     return job
+
+
+@app.get("/intake/place-suggest")
+def place_suggest(q: str) -> List[Dict[str, Any]]:
+    """Resolved place suggestions for the address autocomplete. Under /intake so
+    the auth middleware covers it — an open geocode proxy isn't something to
+    hand out."""
+    return places.suggest(q)
 
 
 @app.post("/intake/{job_id}/confirm")

@@ -16,6 +16,7 @@ import { GenericIntakeForm } from "@/components/generic-intake-form";
 import { SectionHeader } from "@/components/ui/section";
 import { FloatingField, AnimatedCheckbox, TiltCard } from "@/components/ui/field";
 import { Stagger, StaggerItem } from "@/components/ui/motion";
+import { PlaceAutocomplete } from "@/components/ui/place-autocomplete";
 import { cn, humanizeFieldList } from "@/lib/utils";
 import { api, ApiError } from "@/lib/api-client";
 import type { HealthStatus, JobSpec } from "@/lib/types";
@@ -244,12 +245,12 @@ export function BriefStage({
           <Stagger gap={0.04} className="grid gap-3.5 sm:grid-cols-2">
             <StaggerItem>
               <FloatingField label="Moving from" filled={!!form.origin_address} badge={<ProvenanceBadge source={provenance.origin_address} />}>
-                <input className="cp-control" value={form.origin_address} onChange={(e) => set("origin_address", e.target.value)} placeholder="Rock Hill, SC" />
+                <PlaceAutocomplete value={form.origin_address} onChange={(v) => set("origin_address", v)} placeholder="Rock Hill, SC" />
               </FloatingField>
             </StaggerItem>
             <StaggerItem>
               <FloatingField label="Moving to" filled={!!form.destination_address} badge={<ProvenanceBadge source={provenance.destination_address} />}>
-                <input className="cp-control" value={form.destination_address} onChange={(e) => set("destination_address", e.target.value)} placeholder="Charlotte, NC" />
+                <PlaceAutocomplete value={form.destination_address} onChange={(v) => set("destination_address", v)} placeholder="Charlotte, NC" />
               </FloatingField>
             </StaggerItem>
             <StaggerItem>
