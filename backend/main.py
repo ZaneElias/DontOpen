@@ -63,7 +63,7 @@ logger = logging.getLogger("callpilot")
 # possible to tell whether a deploy actually picked up the latest code. Only
 # useful if it is ACTUALLY bumped — a marker left stale for several deploys is
 # worse than none, because it reads as proof the code is old.
-BACKEND_BUILD = "2026-07-23.job-persistence"
+BACKEND_BUILD = "2026-07-23.store-diagnostics"
 
 app = FastAPI(title="CallPilot API")
 
@@ -238,6 +238,22 @@ async def enforce_supabase_auth(request: Request, call_next):
     return await call_next(request)
 
 
+# ── Persistence diagnostics ────────────────────────────────────────────────
+# Job saves are best-effort by design: a storage blip must not fail the request
+# in front of it. The cost is that a permanently broken save looks exactly like
+# a working one from the outside — which is precisely how "session expired"
+# survived several rounds of fixes. These counters make it visible on /health.
+# Counts and exception CLASS only: /health is public, so no message text.
+_STORE_STATS: Dict[str, Any] = {
+    "job_writes_ok": 0,
+    "job_writes_failed": 0,
+    "job_reads_ok": 0,
+    "job_reads_missing": 0,
+    "job_reads_failed": 0,
+    "last_error_type": None,
+}
+
+
 MAX_UPLOAD_BYTES = 12 * 1024 * 1024  # 12 MB
 MAX_STR_LEN = 2000  # cap any free-text field the intake accepts
 MAX_ARRAY_ITEMS = 50
@@ -401,7 +417,10 @@ def _rehydrate_job(job_id: str, request: Optional[Request]) -> Optional[JobSpec]
     try:
         job = store.get_job(token, job_id)
         if job is None:
+            _STORE_STATS["job_reads_missing"] += 1
+            logger.info("job %s not in store for this user — nothing to rehydrate", job_id)
             return None
+        _STORE_STATS["job_reads_ok"] += 1
         JOBS[job_id] = job
         CALLS[job_id] = store.list_calls(token, job_id)
         QUOTES[job_id] = store.list_quotes(token, job_id)
@@ -412,6 +431,8 @@ def _rehydrate_job(job_id: str, request: Optional[Request]) -> Optional[JobSpec]
                     job_id, len(CALLS[job_id]), len(QUOTES[job_id]))
         return job
     except Exception as exc:
+        _STORE_STATS["job_reads_failed"] += 1
+        _STORE_STATS["last_error_type"] = type(exc).__name__
         logger.warning("could not rehydrate job %s: %s", job_id, exc)
         return None
 
@@ -477,6 +498,7 @@ def health() -> Dict[str, Any]:
     # Lets you confirm which backend build is actually live. Bump when shipping
     # a fix so "did Render redeploy?" is answerable instead of guesswork.
     status["backend_build"] = BACKEND_BUILD
+    status["store_stats"] = dict(_STORE_STATS)
     # Surfaced so the UI can warn before the ceiling is hit rather than after.
     status["budget"] = budget.status()
     return status
@@ -546,10 +568,14 @@ def create_intake(body: IntakeCreateRequest, request: Request) -> JobSpec:
         _remember_owner(job.job_id, request)
         try:
             store.save_job(token, user_id, job)
+            _STORE_STATS["job_writes_ok"] += 1
         except Exception as exc:
-            # Transitional: the in-memory copy still serves this request so a
-            # storage blip doesn't break the flow, but it is logged loudly
-            # because an unpersisted job is invisible to the owner later.
+            # The in-memory copy still serves this request so a storage blip
+            # doesn't break the flow, but an unpersisted job is invisible to its
+            # owner after any restart — so it is counted on /health, not just
+            # logged where nobody looks.
+            _STORE_STATS["job_writes_failed"] += 1
+            _STORE_STATS["last_error_type"] = type(exc).__name__
             logger.warning("could not persist job %s: %s", job.job_id, exc)
     return job
 
@@ -1255,7 +1281,10 @@ def _persist_job(job: JobSpec) -> None:
     user_id, token = owner
     try:
         store.save_job(token, user_id, job)
+        _STORE_STATS["job_writes_ok"] += 1
     except Exception as exc:
+        _STORE_STATS["job_writes_failed"] += 1
+        _STORE_STATS["last_error_type"] = type(exc).__name__
         logger.warning("could not persist job %s: %s", job.job_id, exc)
 
 
