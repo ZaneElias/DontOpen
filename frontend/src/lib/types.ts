@@ -19,6 +19,8 @@ export interface JobSpecFieldDef {
   type: "string" | "number" | "boolean" | "array";
   required?: boolean;
   asked_by_interview?: boolean;
+  /** Free-text place name — checked against a geocoder before calls can start. */
+  is_location?: boolean;
   enum?: string[];
   example?: string[];
   description?: string;

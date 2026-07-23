@@ -677,8 +677,18 @@ async def intake_document(job_id: str, file: UploadFile = File(...)) -> JobSpec:
     return job
 
 
+@app.get("/intake/location-check")
+def location_check(q: str) -> Dict[str, Any]:
+    """Is this string a real place? Backs the inline check on the brief form so a
+    bad address is caught as it's typed, rather than after the whole spec is
+    filled in. Under /intake so the auth middleware covers it — an open geocode
+    proxy is not something to hand out."""
+    status, display = location.resolve(q)
+    return {"status": status, "display_name": display}
+
+
 @app.post("/intake/{job_id}/confirm")
-def confirm_intake(job_id: str) -> JobSpec:
+def confirm_intake(job_id: str, allow_unverified_location: bool = False) -> JobSpec:
     job = _job_or_404(job_id)
     if job.confirmed:
         return job
@@ -686,16 +696,37 @@ def confirm_intake(job_id: str) -> JobSpec:
     vconfig = config.load_vertical_config(job.vertical)
 
     # Locations are the only required fields that are pure free text, so this is
-    # where "fddh" would otherwise reach the agent. Advisory by design: a
-    # positively-unresolvable place is flagged for review, never blocked — the
-    # geocoder misses real addresses often enough that hard-failing would be the
-    # worse error. Wrapped because confirm must not break if the lookup does.
-    try:
-        for note in location.review_notes_for(job.fields, vconfig["job_spec_schema"]):
-            if note not in job.needs_review:
-                job.needs_review.append(note)
-    except Exception as exc:
-        logger.warning("location check skipped: %s", exc)
+    # the gate where "dfsd" would otherwise reach the agent and get read out to
+    # real businesses. Blocking, not advisory.
+    #
+    # The escape hatch exists because geocoders do miss real addresses (new
+    # developments, rural routes, unusual spellings). Rather than let that strand
+    # someone, the client can retry with allow_unverified_location=true after the
+    # user confirms the address is right — so the default is safe and a genuine
+    # edge case is still reachable in one extra click.
+    #
+    # Wrapped: a geocoder outage returns "unknown", never "not_found", so this
+    # can only ever block on a positive negative.
+    if not allow_unverified_location:
+        try:
+            bad = location.unresolvable_fields(job.fields, vconfig["job_spec_schema"])
+        except Exception as exc:
+            logger.warning("location check skipped: %s", exc)
+            bad = []
+        if bad:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "error": "unverified_location",
+                    "message": (
+                        "We couldn't find "
+                        + " or ".join(f'"{v}"' for _, v in bad)
+                        + " as a real place. Fix the address, or continue if you're sure it's right."
+                    ),
+                    "fields": [name for name, _ in bad],
+                    "values": [v for _, v in bad],
+                },
+            )
 
     missing = [
         name for name, spec in vconfig["job_spec_schema"].items()

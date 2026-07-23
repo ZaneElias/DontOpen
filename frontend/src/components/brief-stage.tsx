@@ -16,6 +16,8 @@ import { GenericIntakeForm } from "@/components/generic-intake-form";
 import { SectionHeader } from "@/components/ui/section";
 import { FloatingField, AnimatedCheckbox, TiltCard } from "@/components/ui/field";
 import { Stagger, StaggerItem } from "@/components/ui/motion";
+import { FieldError } from "@/components/ui/field-error";
+import { useLocationCheck } from "@/hooks/use-location-check";
 import { cn, humanizeFieldList } from "@/lib/utils";
 import { api, ApiError } from "@/lib/api-client";
 import type { HealthStatus, JobSpec } from "@/lib/types";
@@ -81,6 +83,7 @@ export function BriefStage({
 }) {
   const isMoving = job.vertical === "moving";
   const verticalDisplay = isMoving ? "move" : job.vertical.replace(/_/g, " ");
+  const locationCheck = useLocationCheck();
   const [form, setForm] = useState<FormState>(() => jobToForm(job));
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -151,19 +154,32 @@ export function BriefStage({
     }
   }
 
-  async function handleConfirm() {
+  async function handleConfirm(allowUnverifiedLocation = false) {
     setConfirming(true);
     try {
       await api.updateIntake(job.job_id, buildFieldsPayload(), "manual_form");
-      const confirmed = await api.confirmIntake(job.job_id);
+      const confirmed = await api.confirmIntake(job.job_id, allowUnverifiedLocation);
       onConfirmed(confirmed);
       toast.success("Job spec confirmed — nothing changes now without starting a new job");
     } catch (err) {
       if (err instanceof ApiError && err.status === 422) {
-        const missing = (err.body as { detail?: { missing_fields?: string[] } })?.detail?.missing_fields ?? [];
-        toast.error("A few details are still needed", {
-          description: `Please add ${humanizeFieldList(missing)} before continuing.`,
-        });
+        const detail = (err.body as {
+          detail?: { error?: string; message?: string; missing_fields?: string[] };
+        })?.detail;
+        // A geocoder can miss a real address, so this stays overridable — but
+        // the override is an explicit second action, never the default path.
+        if (detail?.error === "unverified_location") {
+          toast.error("Check the address", {
+            description: detail.message,
+            duration: 12000,
+            action: { label: "It's correct", onClick: () => void handleConfirm(true) },
+          });
+        } else {
+          const missing = detail?.missing_fields ?? [];
+          toast.error("A few details are still needed", {
+            description: `Please add ${humanizeFieldList(missing)} before continuing.`,
+          });
+        }
       } else {
         toast.error(err instanceof ApiError ? err.message : "Could not confirm job spec");
       }
@@ -244,13 +260,33 @@ export function BriefStage({
           <Stagger gap={0.04} className="grid gap-3.5 sm:grid-cols-2">
             <StaggerItem>
               <FloatingField label="Moving from" filled={!!form.origin_address} badge={<ProvenanceBadge source={provenance.origin_address} />}>
-                <input className="cp-control" value={form.origin_address} onChange={(e) => set("origin_address", e.target.value)} placeholder="Rock Hill, SC" />
+                <input
+                  className="cp-control"
+                  value={form.origin_address}
+                  onChange={(e) => {
+                    set("origin_address", e.target.value);
+                    locationCheck.clear("origin_address");
+                  }}
+                  onBlur={(e) => void locationCheck.check("origin_address", e.target.value)}
+                  placeholder="Rock Hill, SC"
+                />
               </FloatingField>
+              <FieldError message={locationCheck.errors.origin_address} />
             </StaggerItem>
             <StaggerItem>
               <FloatingField label="Moving to" filled={!!form.destination_address} badge={<ProvenanceBadge source={provenance.destination_address} />}>
-                <input className="cp-control" value={form.destination_address} onChange={(e) => set("destination_address", e.target.value)} placeholder="Charlotte, NC" />
+                <input
+                  className="cp-control"
+                  value={form.destination_address}
+                  onChange={(e) => {
+                    set("destination_address", e.target.value);
+                    locationCheck.clear("destination_address");
+                  }}
+                  onBlur={(e) => void locationCheck.check("destination_address", e.target.value)}
+                  placeholder="Charlotte, NC"
+                />
               </FloatingField>
+              <FieldError message={locationCheck.errors.destination_address} />
             </StaggerItem>
             <StaggerItem>
               <FloatingField label="Move date" filled={!!form.move_date} badge={<ProvenanceBadge source={provenance.move_date} />}>
@@ -361,7 +397,10 @@ export function BriefStage({
               {saving ? <Loader2 className="size-4 animate-spin" /> : null}
               Save details
             </Button>
-            <Button onClick={handleConfirm} disabled={confirming}>
+            {/* Wrapped, not passed directly: onClick would hand the MouseEvent
+                in as allowUnverifiedLocation, and a truthy event would override
+                the address check on every click. */}
+            <Button onClick={() => void handleConfirm(false)} disabled={confirming}>
               {confirming ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
               Confirm &amp; continue to calls
             </Button>

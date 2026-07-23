@@ -104,6 +104,26 @@ def resolve(text: str) -> Tuple[str, Optional[str]]:
         return "not_found", None
 
 
+def unresolvable_fields(fields: Dict[str, object], schema: Dict[str, dict]) -> list:
+    """Schema fields marked `is_location` whose value the geocoder positively
+    could not find. Returns [(field_name, value), ...].
+
+    Only "not_found" counts. A geocoder that is down, slow, or rate-limited
+    yields "unknown", which is deliberately not reported here — an outage must
+    never be able to block a job.
+    """
+    bad = []
+    for name, spec in schema.items():
+        if not spec.get("is_location"):
+            continue
+        value = fields.get(name)
+        if not isinstance(value, str) or not value.strip():
+            continue
+        if resolve(value)[0] == "not_found":
+            bad.append((name, value.strip()))
+    return bad
+
+
 def review_notes_for(fields: Dict[str, object], schema: Dict[str, dict]) -> list:
     """Return needs_review notes for any schema field marked `is_location: true`
     whose value the geocoder positively could not find.

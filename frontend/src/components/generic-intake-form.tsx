@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { FloatingField, AnimatedCheckbox, TiltCard } from "@/components/ui/field";
 import { Stagger, StaggerItem } from "@/components/ui/motion";
+import { FieldError } from "@/components/ui/field-error";
+import { useLocationCheck } from "@/hooks/use-location-check";
 import { api, ApiError } from "@/lib/api-client";
 import { humanizeFieldList } from "@/lib/utils";
 import type { JobSpec, JobSpecSchema } from "@/lib/types";
@@ -27,6 +29,7 @@ export function GenericIntakeForm({
   onJobUpdated: (job: JobSpec) => void;
   onConfirmed: (job: JobSpec) => void;
 }) {
+  const locationCheck = useLocationCheck();
   const [schema, setSchema] = useState<JobSpecSchema | null>(null);
   const [values, setValues] = useState<Record<string, string | boolean>>({});
   const [saving, setSaving] = useState(false);
@@ -83,16 +86,27 @@ export function GenericIntakeForm({
     }
   }
 
-  async function handleConfirm() {
+  async function handleConfirm(allowUnverifiedLocation = false) {
     setConfirming(true);
     try {
       await api.updateIntake(job.job_id, buildPayload(), "manual_form");
-      const confirmed = await api.confirmIntake(job.job_id);
+      const confirmed = await api.confirmIntake(job.job_id, allowUnverifiedLocation);
       onConfirmed(confirmed);
       toast.success("Job spec confirmed");
     } catch (err) {
       if (err instanceof ApiError && err.status === 422) {
-        const missing = (err.body as { detail?: { missing_fields?: string[] } })?.detail?.missing_fields ?? [];
+        const detail = (err.body as {
+          detail?: { error?: string; message?: string; missing_fields?: string[] };
+        })?.detail;
+        if (detail?.error === "unverified_location") {
+          toast.error("Check the address", {
+            description: detail.message,
+            duration: 12000,
+            action: { label: "It's correct", onClick: () => void handleConfirm(true) },
+          });
+          return;
+        }
+        const missing = detail?.missing_fields ?? [];
         toast.error("A few details are still needed", {
           description: `Please add ${humanizeFieldList(missing)} before continuing.`,
         });
@@ -172,7 +186,13 @@ export function GenericIntakeForm({
                     type={def.type === "number" ? "number" : "text"}
                     className="cp-control"
                     value={value}
-                    onChange={(e) => set(key, e.target.value)}
+                    onChange={(e) => {
+                      set(key, e.target.value);
+                      if (def.is_location) locationCheck.clear(key);
+                    }}
+                    // Schema-driven, so any vertical that declares is_location
+                    // gets the check with no code change here.
+                    onBlur={def.is_location ? (e) => void locationCheck.check(key, e.target.value) : undefined}
                     placeholder={def.example?.[0] ?? def.description ?? ""}
                   />
                 );
@@ -183,6 +203,7 @@ export function GenericIntakeForm({
                   <FloatingField label={label} filled={value !== ""} required={def.required}>
                     {control}
                   </FloatingField>
+                  <FieldError message={locationCheck.errors[key]} />
                 </StaggerItem>
               );
             })}
@@ -192,7 +213,8 @@ export function GenericIntakeForm({
           <Button variant="outline" onClick={handleSave} disabled={saving}>
             {saving ? <Loader2 className="size-4 animate-spin" /> : null} Save details
           </Button>
-          <Button onClick={handleConfirm} disabled={confirming}>
+          {/* Wrapped so the MouseEvent isn't passed in as the override flag. */}
+          <Button onClick={() => void handleConfirm(false)} disabled={confirming}>
             {confirming ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
             Confirm &amp; continue to calls
             </Button>

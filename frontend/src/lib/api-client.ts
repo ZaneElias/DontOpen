@@ -80,7 +80,16 @@ export const api = {
     return request<JobSpec>(`/intake/${jobId}/document`, { method: "POST", body: form });
   },
 
-  confirmIntake: (jobId: string) => request<JobSpec>(`/intake/${jobId}/confirm`, { method: "POST" }),
+  checkLocation: (q: string) =>
+    request<{ status: "valid" | "unknown" | "not_found"; display_name: string | null }>(
+      `/intake/location-check?q=${encodeURIComponent(q)}`
+    ),
+
+  confirmIntake: (jobId: string, allowUnverifiedLocation = false) =>
+    request<JobSpec>(
+      `/intake/${jobId}/confirm${allowUnverifiedLocation ? "?allow_unverified_location=true" : ""}`,
+      { method: "POST" }
+    ),
 
   searchCallList: (category: string, location: string, maxResults = 8) =>
     request<CallListResult[]>(
