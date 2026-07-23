@@ -60,8 +60,10 @@ from services import openai_client
 logger = logging.getLogger("callpilot")
 
 # Bumped whenever backend behaviour changes, and surfaced on /health so it's
-# possible to tell whether a deploy actually picked up the latest code.
-BACKEND_BUILD = "2026-07-22.transcript-voice-fallback"
+# possible to tell whether a deploy actually picked up the latest code. Only
+# useful if it is ACTUALLY bumped — a marker left stale for several deploys is
+# worse than none, because it reads as proof the code is old.
+BACKEND_BUILD = "2026-07-23.job-persistence"
 
 app = FastAPI(title="CallPilot API")
 
