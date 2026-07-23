@@ -20,7 +20,7 @@ job_spec_schema:
   service_type: {type: string, required: true, enum: [diagnostic, repair, maintenance], asked_by_interview: true}
   parts_preference: {type: string, required: false, enum: [oem, aftermarket, either], asked_by_interview: true}
   urgency: {type: string, required: false, enum: [same_day, this_week, flexible], asked_by_interview: true}
-  location: {type: string, required: true, asked_by_interview: true, description: "city or zip to find shops"}
+  location: {type: string, required: true, asked_by_interview: true, is_location: true, description: "city or zip to find shops"}
   special_notes: {type: string, required: false, asked_by_interview: true}
 
 # ── Price benchmarks (ground truth for red-flag detection) ──────────────────────────────────────────────────────────────────────────────────────

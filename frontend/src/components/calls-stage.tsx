@@ -62,6 +62,7 @@ export function CallsStage({
   const [searchLocation, setSearchLocation] = useState(String(job.fields.destination_address ?? ""));
   const [searchResults, setSearchResults] = useState<CallListResult[]>([]);
   const [searching, setSearching] = useState(false);
+  const [searched, setSearched] = useState(false);
 
   const [manualName, setManualName] = useState("");
   const [manualPhone, setManualPhone] = useState("");
@@ -115,10 +116,14 @@ export function CallsStage({
 
   async function handleSearch() {
     setSearching(true);
+    setSearched(false);
     try {
       const results = await api.searchCallList(searchCategory, searchLocation);
       setSearchResults(results);
-      if (results.length === 0) toast.info("No businesses found — try a broader location or category.");
+      // A toast alone made a zero-result search look like a dead button — the
+      // card gave no sign anything had happened. The inline empty state below
+      // stays on screen and names the likely cause.
+      setSearched(true);
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Call-list search failed");
     } finally {
@@ -269,11 +274,22 @@ export function CallsStage({
                     <div className="flex flex-col gap-2 sm:flex-row">
                       <Input value={searchCategory} onChange={(e) => setSearchCategory(e.target.value)} placeholder="moving companies" />
                       <Input value={searchLocation} onChange={(e) => setSearchLocation(e.target.value)} placeholder="Charlotte, NC" />
-                      <Button onClick={handleSearch} disabled={searching}>
+                      <Button className="shrink-0" onClick={handleSearch} disabled={searching}>
                         {searching ? <Loader2 className="size-4 animate-spin" /> : <Search className="size-4" />}
                         Search
                       </Button>
                     </div>
+                    {searched && searchResults.length === 0 && (
+                      <div className="rounded-md border border-line bg-paper p-3 text-sm">
+                        <p className="font-medium text-ink">
+                          No businesses found for &ldquo;{searchLocation.trim() || "—"}&rdquo;
+                        </p>
+                        <p className="mt-1 text-xs text-ink-muted">
+                          Check the location is a real city, area, or postcode — the search takes it literally.
+                          You can also try a broader category, or add a company by name below.
+                        </p>
+                      </div>
+                    )}
                     {searchResults.length > 0 && (
                       <div className="space-y-2">
                         {searchResults.map((r) => (
@@ -299,7 +315,7 @@ export function CallsStage({
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <Input value={manualName} onChange={(e) => setManualName(e.target.value)} placeholder="Company name" />
                   <Input value={manualPhone} onChange={(e) => setManualPhone(e.target.value)} placeholder="+1 555 123 4567" />
-                  <Button variant="outline" onClick={addManual}>
+                  <Button variant="outline" className="shrink-0" onClick={addManual}>
                     <Plus className="size-4" /> Add
                   </Button>
                 </div>

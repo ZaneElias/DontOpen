@@ -13,8 +13,8 @@ display_name: "Moving Companies"
 # The exact shape both intake paths (voice interview, document extraction)
 # must produce. `required` fields block confirmation until present.
 job_spec_schema:
-  origin_address: {type: string, required: true, asked_by_interview: true}
-  destination_address: {type: string, required: true, asked_by_interview: true}
+  origin_address: {type: string, required: true, asked_by_interview: true, is_location: true}
+  destination_address: {type: string, required: true, asked_by_interview: true, is_location: true}
   distance_miles: {type: number, required: false, asked_by_interview: true}
   move_date: {type: string, required: true, asked_by_interview: true}
   bedrooms: {type: number, required: true, asked_by_interview: true}

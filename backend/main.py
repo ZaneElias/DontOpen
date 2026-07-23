@@ -54,6 +54,7 @@ from schema import (
 )
 from services import call_list as call_list_service
 from services import elevenlabs_client
+from services import location
 from services import openai_client
 
 logger = logging.getLogger("callpilot")
@@ -571,6 +572,17 @@ def _merge_fields(job: JobSpec, fields: Dict[str, Any], source: IntakeSource, co
     # paths (voice/document) only add flags here — they never prune.
     if source == IntakeSource.MANUAL_FORM:
         _prune_needs_review(job, set(fields.keys()))
+        # After pruning, so the flag isn't immediately dropped again. Manual
+        # saves only: the voice path writes one field per webhook call, and a
+        # geocode lookup inside that round-trip would risk the agent's tool
+        # timeout. Confirm re-checks, so voice-only specs are still covered.
+        try:
+            schema = config.load_vertical_config(job.vertical)["job_spec_schema"]
+            for note in location.review_notes_for(job.fields, schema):
+                if note not in job.needs_review:
+                    job.needs_review.append(note)
+        except Exception as exc:
+            logger.warning("location check skipped on save: %s", exc)
 
 
 @app.post("/intake/{job_id}/update")
@@ -672,6 +684,19 @@ def confirm_intake(job_id: str) -> JobSpec:
         return job
 
     vconfig = config.load_vertical_config(job.vertical)
+
+    # Locations are the only required fields that are pure free text, so this is
+    # where "fddh" would otherwise reach the agent. Advisory by design: a
+    # positively-unresolvable place is flagged for review, never blocked — the
+    # geocoder misses real addresses often enough that hard-failing would be the
+    # worse error. Wrapped because confirm must not break if the lookup does.
+    try:
+        for note in location.review_notes_for(job.fields, vconfig["job_spec_schema"]):
+            if note not in job.needs_review:
+                job.needs_review.append(note)
+    except Exception as exc:
+        logger.warning("location check skipped: %s", exc)
+
     missing = [
         name for name, spec in vconfig["job_spec_schema"].items()
         if spec.get("required") and job.fields.get(name) in (None, "", [])
