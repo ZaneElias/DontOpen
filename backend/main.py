@@ -382,17 +382,53 @@ def _enforce_budget() -> None:
         )
 
 
-def _job_or_404(job_id: str) -> JobSpec:
-    job = JOBS.get(job_id)
+def _rehydrate_job(job_id: str, request: Optional[Request]) -> Optional[JobSpec]:
+    """Reload a job (and its calls/quotes) from Supabase into memory.
+
+    Jobs were always written through to Postgres, but nothing ever read them
+    back — so every restart, redeploy, or free-tier idle-spindown surfaced as
+    "your session expired" even though the data was sitting safely in the
+    database. RLS still applies: the load runs as the caller, so this can only
+    ever return a job that user owns.
+    """
+    if request is None or not store.store_configured():
+        return None
+    token = getattr(request.state, "access_token", None)
+    user_id = getattr(request.state, "user_id", None)
+    if not (token and user_id):
+        return None
+    try:
+        job = store.get_job(token, job_id)
+        if job is None:
+            return None
+        JOBS[job_id] = job
+        CALLS[job_id] = store.list_calls(token, job_id)
+        QUOTES[job_id] = store.list_quotes(token, job_id)
+        # Background simulations need a token to write as; restore it too, or
+        # the first run after a restart would fail to persist.
+        _JOB_OWNER[job_id] = (user_id, token)
+        logger.info("rehydrated job %s from store (%d calls, %d quotes)",
+                    job_id, len(CALLS[job_id]), len(QUOTES[job_id]))
+        return job
+    except Exception as exc:
+        logger.warning("could not rehydrate job %s: %s", job_id, exc)
+        return None
+
+
+def _job_or_404(job_id: str, request: Optional[Request] = None) -> JobSpec:
+    job = JOBS.get(job_id) or _rehydrate_job(job_id, request)
+    if job is not None and request is not None:
+        # Refresh the captured credentials on every authenticated touch, so
+        # write-through and background simulations always have a live token.
+        _remember_owner(job_id, request)
     if job is None:
         raise HTTPException(
             status_code=404,
             detail={
                 "error": "job_not_found",
                 "message": (
-                    f"No job with id '{job_id}'. Backend state is in-memory and does not "
-                    f"survive a server restart — if this job existed before a deploy/restart, "
-                    f"start a new one."
+                    f"No job with id '{job_id}'. It may have been started on a "
+                    f"different account, or never finished saving — start a new one."
                 ),
             },
         )
@@ -519,26 +555,18 @@ def create_intake(body: IntakeCreateRequest, request: Request) -> JobSpec:
 
 @app.get("/intake/{job_id}")
 def get_intake(job_id: str, request: Request) -> JobSpec:
-    token = getattr(request.state, "access_token", None)
-    if store.store_configured() and token:
-        # Ownership is decided by Postgres RLS, not by us: a job belonging to
-        # someone else simply doesn't come back.
-        try:
-            owned = store.get_job(token, job_id)
-        except Exception as exc:
-            logger.warning("ownership lookup failed for %s: %s", job_id, exc)
-            owned = None
-        if owned is not None:
-            JOBS.setdefault(job_id, owned)
-            return owned
-    return _job_or_404(job_id)
+    # Ownership is decided by Postgres RLS, not by us: _job_or_404 rehydrates
+    # through the caller's own token, so a job belonging to someone else simply
+    # doesn't come back. Going through the shared path also restores that job's
+    # calls and quotes, which the old inline lookup here did not.
+    return _job_or_404(job_id, request)
 
 
 @app.get("/intake/{job_id}/schema")
-def get_intake_schema(job_id: str) -> Dict[str, Any]:
+def get_intake_schema(job_id: str, request: Request) -> Dict[str, Any]:
     """The active vertical's job_spec_schema, for the frontend to render the
     manual-form fallback and the confirmation/review screen."""
-    job = _job_or_404(job_id)
+    job = _job_or_404(job_id, request)
     vconfig = config.load_vertical_config(job.vertical)
     return vconfig["job_spec_schema"]
 
@@ -587,18 +615,19 @@ def _merge_fields(job: JobSpec, fields: Dict[str, Any], source: IntakeSource, co
 
 
 @app.post("/intake/{job_id}/update")
-def update_intake(job_id: str, body: IntakeUpdateRequest) -> JobSpec:
+def update_intake(job_id: str, body: IntakeUpdateRequest, request: Request) -> JobSpec:
     """Direct form-based intake update — the manual-form fallback so the
     frontend can complete a job even without the ElevenLabs interview agent
     configured, and the same path document extraction results are merged
     through."""
-    job = _job_or_404(job_id)
+    job = _job_or_404(job_id, request)
     if job.confirmed:
         raise HTTPException(
             status_code=409,
             detail={"error": "already_confirmed", "message": "This job spec is confirmed and frozen. Start a new job to change it."},
         )
     _merge_fields(job, body.fields, body.source)
+    _persist_job(job)
     return job
 
 
@@ -617,14 +646,17 @@ def intake_voice_tool_webhook(job_id: str, body: VoiceToolWebhookBody) -> Dict[s
     if job.confirmed:
         raise HTTPException(status_code=409, detail={"error": "already_confirmed"})
     _merge_fields(job, {body.field_name: body.value}, IntakeSource.VOICE_INTERVIEW, body.confidence)
+    # The agent's webhook carries no JWT, but _JOB_OWNER holds the token
+    # captured when the user opened the job, so the write still lands as them.
+    _persist_job(job)
     return {"status": "ok", "job_id": job_id, "field_name": body.field_name}
 
 
 @app.post("/intake/{job_id}/document")
-async def intake_document(job_id: str, file: UploadFile = File(...)) -> JobSpec:
+async def intake_document(job_id: str, request: Request, file: UploadFile = File(...)) -> JobSpec:
     """Document/photo intake — vision-extracted into the same JobSpec.fields
     shape as the voice interview."""
-    job = _job_or_404(job_id)
+    job = _job_or_404(job_id, request)
     if job.confirmed:
         raise HTTPException(status_code=409, detail={"error": "already_confirmed"})
 
@@ -675,6 +707,7 @@ async def intake_document(job_id: str, file: UploadFile = File(...)) -> JobSpec:
     for note in result.get("needs_review", []):
         if note not in job.needs_review:
             job.needs_review.append(note)
+    _persist_job(job)
     return job
 
 
@@ -687,8 +720,11 @@ def place_suggest(q: str) -> List[Dict[str, Any]]:
 
 
 @app.post("/intake/{job_id}/confirm")
-def confirm_intake(job_id: str) -> JobSpec:
-    job = _job_or_404(job_id)
+def confirm_intake(job_id: str, request: Request) -> JobSpec:
+    # `request` is needed so a confirm can rehydrate a job the process no longer
+    # holds in memory. Deliberately WITHOUT allow_unverified_location — that
+    # belongs to the address-blocking change, which stays reverted.
+    job = _job_or_404(job_id, request)
     if job.confirmed:
         return job
 
@@ -722,6 +758,7 @@ def confirm_intake(job_id: str) -> JobSpec:
 
     job.confirmed = True
     job.confirmed_at = datetime.utcnow()
+    _persist_job(job)
     return job
 
 
@@ -778,7 +815,7 @@ def counterparty_roster(vertical: str = "moving") -> List[Dict[str, Any]]:
 
 @app.post("/calls/{job_id}/start")
 async def start_calls(job_id: str, body: CallStartRequest, request: Request) -> List[CallRecord]:
-    job = _job_or_404(job_id)
+    job = _job_or_404(job_id, request)
     if not job.confirmed:
         raise HTTPException(
             status_code=409,
@@ -857,11 +894,11 @@ async def start_calls(job_id: str, body: CallStartRequest, request: Request) -> 
 
 
 @app.get("/calls/{job_id}")
-async def list_calls(job_id: str, refresh: bool = True) -> List[CallRecord]:
+async def list_calls(job_id: str, request: Request, refresh: bool = True) -> List[CallRecord]:
     """Polling endpoint for the calls dashboard. When refresh=true (default),
     pulls latest status/transcript from ElevenLabs for any call still in
     progress before returning."""
-    _job_or_404(job_id)
+    _job_or_404(job_id, request)
     records = CALLS.get(job_id, [])
 
     if refresh:
@@ -1127,8 +1164,8 @@ async def call_audio_replay(job_id: str, call_id: str, request: Request):
 
 
 @app.get("/quotes/{job_id}")
-def list_quotes(job_id: str) -> List[Quote]:
-    _job_or_404(job_id)
+def list_quotes(job_id: str, request: Request) -> List[Quote]:
+    _job_or_404(job_id, request)
     return QUOTES.get(job_id, [])
 
 
@@ -1179,6 +1216,26 @@ def _remember_owner(job_id: str, request: Request) -> None:
     token = getattr(request.state, "access_token", None)
     if user_id and token:
         _JOB_OWNER[job_id] = (user_id, token)
+
+
+def _persist_job(job: JobSpec) -> None:
+    """Write-through so job edits survive a restart.
+
+    save_job used to run only at creation, which left the stored row an empty
+    shell: the entire brief, and the confirmed flag, existed only in memory. A
+    redeploy or an idle spin-down then lost everything the user had typed.
+    Never raises — a storage blip must not fail the request in front of it.
+    """
+    if not store.store_configured():
+        return
+    owner = _JOB_OWNER.get(job.job_id)
+    if not owner:
+        return
+    user_id, token = owner
+    try:
+        store.save_job(token, user_id, job)
+    except Exception as exc:
+        logger.warning("could not persist job %s: %s", job.job_id, exc)
 
 
 def _persist_call(job_id: str, record: CallRecord) -> None:
@@ -1301,14 +1358,14 @@ async def _run_one_negotiation(*, job_id: str, record: CallRecord, caller_agent_
 
 
 @app.post("/calls/{job_id}/simulate")
-async def simulate_calls(job_id: str, body: SimulateCallsRequest, request: Request) -> List[CallRecord]:
+async def simulate_calls(job_id: str, body: SimulateCallsRequest, request: Request) -> List[CallRecord]:  # noqa: D401
     """
     Run the real Caller agent against each counterparty persona via ElevenLabs'
     agent simulation — a genuine, unscripted agent-to-agent negotiation. The
     Caller's log_quote tool call is read straight from the returned transcript,
     so no webhook/telephony is involved. This is the always-available demo path.
     """
-    job = _job_or_404(job_id)
+    job = _job_or_404(job_id, request)
     if not job.confirmed:
         raise HTTPException(
             status_code=409,
@@ -1424,8 +1481,8 @@ class NegotiateStartRequest(BaseModel):
 
 
 @app.post("/negotiate/{job_id}/start")
-async def start_negotiation(job_id: str, body: NegotiateStartRequest) -> List[CallRecord]:
-    job = _job_or_404(job_id)
+async def start_negotiation(job_id: str, body: NegotiateStartRequest, request: Request) -> List[CallRecord]:
+    job = _job_or_404(job_id, request)
     quotes = [q for q in QUOTES.get(job_id, []) if q.outcome == CallOutcome.QUOTE_GIVEN and q.total_price]
     if len(quotes) < 2:
         raise HTTPException(
@@ -1502,7 +1559,7 @@ async def start_negotiation(job_id: str, body: NegotiateStartRequest) -> List[Ca
 
 
 @app.post("/negotiate/{job_id}/simulate")
-async def simulate_negotiation(job_id: str, body: NegotiateStartRequest) -> List[CallRecord]:
+async def simulate_negotiation(job_id: str, body: NegotiateStartRequest, request: Request) -> List[CallRecord]:
     """
     Negotiation via agent simulation. For each target company, the Caller
     calls back in negotiation mode — armed with the real cheapest competing
@@ -1511,7 +1568,8 @@ async def simulate_negotiation(job_id: str, body: NegotiateStartRequest) -> List
     by the persona on the merits, not a script. The revised total updates that
     company's quote in place (pre → post).
     """
-    job = _job_or_404(job_id)
+    job = _job_or_404(job_id, request)
+    _remember_owner(job_id, request)
     quotes = [q for q in QUOTES.get(job_id, []) if q.outcome == CallOutcome.QUOTE_GIVEN and q.total_price]
     if len(quotes) < 2:
         raise HTTPException(
@@ -1702,8 +1760,8 @@ def _rank_quotes(quotes: List[Quote], calls: List[CallRecord]) -> List[RankedQuo
 
 
 @app.get("/report/{job_id}")
-async def get_report(job_id: str) -> Report:
-    job = _job_or_404(job_id)
+async def get_report(job_id: str, request: Request) -> Report:
+    job = _job_or_404(job_id, request)
     quotes = QUOTES.get(job_id, [])
     calls = CALLS.get(job_id, [])
     if not quotes:
@@ -1768,10 +1826,10 @@ async def get_report(job_id: str) -> Report:
 
 
 @app.get("/report/{job_id}/audio")
-async def report_audio(job_id: str):
+async def report_audio(job_id: str, request: Request):
     """The recommendation, spoken aloud in the agent's voice — synthesized from
     the most recently generated report summary and cached until it changes."""
-    _job_or_404(job_id)
+    _job_or_404(job_id, request)
     summary = REPORT_SUMMARY_CACHE.get(job_id)
     if not summary:
         raise HTTPException(status_code=404, detail={"error": "no_report_yet", "message": "Generate the report first."})
