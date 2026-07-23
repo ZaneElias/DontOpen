@@ -553,6 +553,20 @@ def create_intake(body: IntakeCreateRequest, request: Request) -> JobSpec:
     return job
 
 
+# MUST be declared before /intake/{job_id}: FastAPI matches routes in
+# registration order, so with the parameterised route first, a GET to
+# /intake/place-suggest bound job_id="place-suggest" and returned
+# "No job with id 'place-suggest'". The frontend reads that 404 as the job
+# having vanished and shows "Your session expired" — so typing an address
+# killed the session on every keystroke. Keep static /intake/* paths above.
+@app.get("/intake/place-suggest")
+def place_suggest(q: str) -> List[Dict[str, Any]]:
+    """Resolved place suggestions for the address autocomplete. Under /intake so
+    the auth middleware covers it — an open geocode proxy isn't something to
+    hand out."""
+    return places.suggest(q)
+
+
 @app.get("/intake/{job_id}")
 def get_intake(job_id: str, request: Request) -> JobSpec:
     # Ownership is decided by Postgres RLS, not by us: _job_or_404 rehydrates
@@ -709,14 +723,6 @@ async def intake_document(job_id: str, request: Request, file: UploadFile = File
             job.needs_review.append(note)
     _persist_job(job)
     return job
-
-
-@app.get("/intake/place-suggest")
-def place_suggest(q: str) -> List[Dict[str, Any]]:
-    """Resolved place suggestions for the address autocomplete. Under /intake so
-    the auth middleware covers it — an open geocode proxy isn't something to
-    hand out."""
-    return places.suggest(q)
 
 
 @app.post("/intake/{job_id}/confirm")

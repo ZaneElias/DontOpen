@@ -46,7 +46,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     // A missing-job 404 means the backend lost this job (restart/redeploy).
     // Broadcast it so the app can recover to a fresh job instead of the user
     // getting stuck on a dead session that only a new tab clears.
-    if (res.status === 404 && typeof window !== "undefined" && /no job with id/i.test(message || "")) {
+    //
+    // Matched on the structured error code, not the prose: a route-ordering bug
+    // once made /intake/place-suggest fall through to /intake/{job_id}, and
+    // regexing the message meant a mistyped *endpoint* was reported to the user
+    // as their session dying. Narrowed to real job routes so a non-job endpoint
+    // can never nuke the session again.
+    const code = (body as { detail?: { error?: string } })?.detail?.error;
+    const isJobRoute = /^\/(intake|calls|quotes|negotiate|report)\/job_/.test(path);
+    if (res.status === 404 && typeof window !== "undefined" && code === "job_not_found" && isJobRoute) {
       window.dispatchEvent(new CustomEvent("callpilot:job-missing"));
     }
     throw new ApiError(res.status, message || `Request failed (${res.status})`, body);
