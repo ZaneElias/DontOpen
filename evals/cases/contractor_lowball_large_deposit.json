@@ -1,0 +1,31 @@
+{
+  "id": "contractor_lowball_large_deposit",
+  "vertical": "contractor",
+  "description": "The hard-sell contractor: a $7500 headline bid (median $12000, floor $8400) that isn't binding AND demands a 40% deposit. All three signals - below-market, non-binding, oversized deposit - must fire.",
+  "job_fields": {
+    "project_type": "bathroom_remodel",
+    "scope_summary": "gut and redo a 5x8 hall bathroom",
+    "square_footage": 40,
+    "materials_provided_by": "contractor",
+    "finish_level": "standard",
+    "location": "Charlotte, NC"
+  },
+  "simulation_response": {
+    "simulated_conversation": [
+      {"role": "agent", "message": "Bid on a 5x8 bathroom remodel, full gut, standard finishes.", "time_in_call_secs": 0},
+      {"role": "user", "message": "Premier Renovations! Oh we can absolutely do that - seventy five hundred, that's our special right now. Cheapest you'll find, guaranteed.", "time_in_call_secs": 8},
+      {"role": "agent", "message": "Seventy five hundred all in? Does that include demo, materials, and the permit for the plumbing?", "time_in_call_secs": 17},
+      {"role": "user", "message": "That's the starting point! We'll dial in the exact fixtures once we get going - you'll want the upgraded tile trust me. To lock this price in I just need a forty percent deposit today.", "time_in_call_secs": 26},
+      {"role": "agent", "message": "So the seventy five hundred isn't a firm final number, and you need three thousand up front?", "time_in_call_secs": 38},
+      {"role": "user", "message": "Forty percent locks your spot and the price. Everyone does it this way.", "time_in_call_secs": 45, "tool_calls": [{"tool_name": "log_quote", "params_as_json": "{\"outcome\": \"quote_given\", \"company_name\": \"Premier Renovations\", \"base_price\": 7500, \"line_items\": [{\"label\": \"Headline remodel price\", \"amount\": 7500, \"is_optional_or_conditional\": false}, {\"label\": \"Required deposit\", \"amount\": 3000, \"is_optional_or_conditional\": false}], \"total_price\": 7500, \"binding\": false, \"notes\": \"Would not commit to a firm number; wants 40% deposit up front.\"}"}]}
+    ]
+  },
+  "expect": {
+    "line_item_labels": ["Headline remodel price", "Required deposit"],
+    "total_price": 7500.0,
+    "outcome": "quote_given",
+    "binding": false,
+    "red_flags_contain": ["below", "deposit"],
+    "is_red_flag": true
+  }
+}

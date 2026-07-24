@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import hmac
 import json
 import logging
 import os
@@ -454,6 +455,40 @@ def _call_or_404(job_id: str, call_id: str, request: Optional[Request] = None) -
     raise HTTPException(status_code=404, detail={"error": "call_not_found", "call_id": call_id})
 
 
+# Header the agent is configured to send. HMAC-SHA256 of the raw request body,
+# hex-encoded, keyed by WEBHOOK_SHARED_SECRET. Kept as a plain header (not a
+# provider-specific scheme) so it works for both ElevenLabs tool webhooks and
+# any manual test client.
+_WEBHOOK_SIG_HEADER = "x-callpilot-signature"
+
+
+async def _verify_webhook_signature(request: Request) -> bytes:
+    """Return the raw request body, rejecting it if the HMAC signature is absent
+    or wrong. No-ops (returns the body) when WEBHOOK_SHARED_SECRET is unset, so
+    simulation mode and un-provisioned deploys are unaffected.
+
+    Reads the raw bytes and caches them on request.state so the endpoint's
+    Pydantic model can still parse the same body afterwards — FastAPI re-reads
+    request._body rather than the consumed stream.
+    """
+    body = await request.body()
+    secret = config.webhook_shared_secret()
+    if not secret:
+        return body  # verification disabled
+
+    provided = request.headers.get(_WEBHOOK_SIG_HEADER, "")
+    expected = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+    # compare_digest: constant-time, so a caller can't time-probe the signature.
+    if not (provided and hmac.compare_digest(provided, expected)):
+        logger.warning("rejected webhook with bad/missing signature on %s", request.url.path)
+        raise HTTPException(
+            status_code=401,
+            detail={"error": "bad_webhook_signature",
+                    "message": "Webhook signature missing or invalid."},
+        )
+    return body
+
+
 def _idempotency_key(payload: Dict[str, Any], provided: Optional[str]) -> str:
     if provided:
         return provided
@@ -652,10 +687,11 @@ class VoiceToolWebhookBody(BaseModel):
 
 
 @app.post("/intake/{job_id}/voice-tool")
-def intake_voice_tool_webhook(job_id: str, body: VoiceToolWebhookBody) -> Dict[str, Any]:
+async def intake_voice_tool_webhook(job_id: str, body: VoiceToolWebhookBody, request: Request) -> Dict[str, Any]:
     """Target for the interview agent's `log_intake_field` tool
     (prompts/interview_agent.md). Called once per field as the interview
     progresses."""
+    await _verify_webhook_signature(request)
     job = _job_or_404(job_id)
     if job.confirmed:
         raise HTTPException(status_code=409, detail={"error": "already_confirmed"})
@@ -1075,11 +1111,12 @@ async def _apply_negotiation_result(job_id: str, call: CallRecord, params: Dict[
 
 
 @app.post("/calls/{job_id}/{call_id}/webhook")
-async def call_quote_webhook(job_id: str, call_id: str, body: QuoteWebhookBody) -> Dict[str, Any]:
+async def call_quote_webhook(job_id: str, call_id: str, body: QuoteWebhookBody, request: Request) -> Dict[str, Any]:
     """Target for the Caller agent's `log_quote` tool on real telephony calls.
     Idempotent: a retried tool call with the same content won't duplicate a
     quote. Handles both first-pass calls and negotiation callbacks (branching
     on the call record's is_negotiation_callback flag)."""
+    await _verify_webhook_signature(request)
     _job_or_404(job_id)
     call = _call_or_404(job_id, call_id)
 
@@ -1660,12 +1697,12 @@ async def simulate_negotiation(job_id: str, body: NegotiateStartRequest, request
 
 
 @app.post("/negotiate/{job_id}/{call_id}/webhook")
-async def negotiation_webhook(job_id: str, call_id: str, body: QuoteWebhookBody) -> Dict[str, Any]:
+async def negotiation_webhook(job_id: str, call_id: str, body: QuoteWebhookBody, request: Request) -> Dict[str, Any]:
     """Back-compat alias. The Caller agent uses one `log_quote` tool pointing at
     /calls/{job_id}/{call_id}/webhook for both first-pass and callback calls;
     that handler already branches on the call's is_negotiation_callback flag.
     This route delegates to it so an agent wired to the older path still works."""
-    return await call_quote_webhook(job_id, call_id, body)
+    return await call_quote_webhook(job_id, call_id, body, request)
 
 
 # ──────────────────────────────────────────────────────────────────────────

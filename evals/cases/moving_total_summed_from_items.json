@@ -1,0 +1,29 @@
+{
+  "id": "moving_total_summed_from_items",
+  "vertical": "moving",
+  "description": "Agent logs itemized fees but omits total_price. _total_from_params must sum the line items (1500+180+95=1775) rather than fall back to base_price alone — dropping to 1500 here would under-report by 275 and wrongly rank this company best.",
+  "job_fields": {
+    "origin_address": "Rock Hill, SC",
+    "destination_address": "Charlotte, NC",
+    "bedrooms": 2,
+    "inventory_size": "2br",
+    "stairs_origin": 0,
+    "stairs_destination": 0,
+    "packing_preference": "self_pack"
+  },
+  "simulation_response": {
+    "simulated_conversation": [
+      {"role": "agent", "message": "Two bedroom, Rock Hill to Charlotte, no stairs. What's the cost?", "time_in_call_secs": 0},
+      {"role": "user", "message": "Fifteen hundred for the crew and truck. Fuel's one eighty. Packing materials ninety five if you need them — you said self pack so that's optional.", "time_in_call_secs": 13},
+      {"role": "agent", "message": "Got it — fifteen hundred base, one eighty fuel, ninety five materials optional. Binding?", "time_in_call_secs": 27},
+      {"role": "user", "message": "Binding for thirty days.", "time_in_call_secs": 33, "tool_calls": [{"tool_name": "log_quote", "params_as_json": "{\"outcome\": \"quote_given\", \"company_name\": \"Queen City Relocation\", \"base_price\": 1500, \"line_items\": [{\"label\": \"Crew and truck\", \"amount\": 1500, \"is_optional_or_conditional\": false}, {\"label\": \"Fuel\", \"amount\": 180, \"is_optional_or_conditional\": false}, {\"label\": \"Packing materials\", \"amount\": 95, \"is_optional_or_conditional\": true}], \"binding\": true}"}]}
+    ]
+  },
+  "expect": {
+    "line_item_labels": ["Crew and truck", "Fuel", "Packing materials"],
+    "total_price": 1775.0,
+    "outcome": "quote_given",
+    "binding": true,
+    "red_flags_absent": ["below"]
+  }
+}

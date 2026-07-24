@@ -1,0 +1,35 @@
+{
+  "id": "moving_tough_all_fees",
+  "vertical": "moving",
+  "description": "Tough negotiator itemizes five separate fees across the call. Every one must survive extraction — a dropped fee understates the total and corrupts the ranking.",
+  "job_fields": {
+    "origin_address": "Rock Hill, SC",
+    "destination_address": "Charlotte, NC",
+    "bedrooms": 2,
+    "inventory_size": "2br",
+    "stairs_origin": 2,
+    "stairs_destination": 0,
+    "long_carry_expected": false,
+    "packing_preference": "self_pack"
+  },
+  "simulation_response": {
+    "simulated_conversation": [
+      {"role": "agent", "message": "Hi — I'm an AI assistant calling on behalf of a customer planning a move, to gather a quote. Is now a good time?", "time_in_call_secs": 0},
+      {"role": "user", "message": "Summit Relocation, this is Dave. Sure, go ahead.", "time_in_call_secs": 5},
+      {"role": "agent", "message": "Two bedroom apartment, Rock Hill South Carolina to Charlotte North Carolina, about 45 miles. Two flights of stairs at pickup, ground floor at the destination. Customer packs their own boxes. What would that run?", "time_in_call_secs": 11},
+      {"role": "user", "message": "Local two bedroom, that's a three man crew, roughly six hours. Base labor and truck is fourteen hundred.", "time_in_call_secs": 22},
+      {"role": "agent", "message": "Understood. Are there any charges on top of that base — fuel, stairs, materials, insurance?", "time_in_call_secs": 31},
+      {"role": "user", "message": "Fuel surcharge is one twenty five. Two flights of stairs, that's a hundred and fifty. Basic valuation coverage is included but full value protection runs one seventy five if they want it. And there's a forty dollar materials fee for shrink wrap and pads.", "time_in_call_secs": 40},
+      {"role": "agent", "message": "So base fourteen hundred, fuel one twenty five, stairs one fifty, full value protection one seventy five, materials forty. That totals eighteen ninety. Is that number binding?", "time_in_call_secs": 58},
+      {"role": "user", "message": "That's a binding not-to-exceed estimate, yes. Good for thirty days.", "time_in_call_secs": 70},
+      {"role": "agent", "message": "Thank you Dave, that's everything I needed.", "time_in_call_secs": 78, "tool_calls": [{"tool_name": "log_quote", "params_as_json": "{\"outcome\": \"quote_given\", \"company_name\": \"Summit Relocation Group\", \"base_price\": 1400, \"line_items\": [{\"label\": \"Base labor and truck\", \"amount\": 1400, \"is_optional_or_conditional\": false}, {\"label\": \"Fuel surcharge\", \"amount\": 125, \"is_optional_or_conditional\": false}, {\"label\": \"Stairs fee (2 flights at pickup)\", \"amount\": 150, \"is_optional_or_conditional\": false}, {\"label\": \"Full value protection\", \"amount\": 175, \"is_optional_or_conditional\": true}, {\"label\": \"Materials fee\", \"amount\": 40, \"is_optional_or_conditional\": false}], \"total_price\": 1890, \"binding\": true}"}]}
+    ]
+  },
+  "expect": {
+    "line_item_labels": ["Base labor and truck", "Fuel surcharge", "Stairs fee (2 flights at pickup)", "Full value protection", "Materials fee"],
+    "total_price": 1890.0,
+    "outcome": "quote_given",
+    "binding": true,
+    "red_flags_absent": ["below", "stairs", "binding"]
+  }
+}

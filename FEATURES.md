@@ -79,9 +79,12 @@ report records the before/after movement per company.
 
 ## Config-driven verticals
 
-Two ship today — **Moving** and **Auto Repair** — defined entirely in
-`backend/configs/*.yaml`. Each config declares its own field schema, price
-benchmarks, red-flag rules, negotiation levers, and counterparty personas.
+Three ship today — **Moving**, **Auto Repair**, and **Home Contractors** —
+defined entirely in `backend/configs/*.yaml`. Each config declares its own field
+schema, price benchmarks, red-flag rules, negotiation levers, and counterparty
+personas. The third was added with zero changes to `main.py` or `schema.py` — a
+YAML file plus three persona prompts — which is the config-driven claim shown
+rather than asserted.
 
 **Adding a vertical is a file, not code.** Drop in a YAML and it appears in the
 market picker, the intake form regenerates itself from the schema, the red-flag
@@ -128,6 +131,10 @@ changes how a call is placed, not who is contacted or what is said. See
 - Every route touching job or quote data requires a valid token; agent webhooks
   are excluded by design (they're called by ElevenLabs, not a browser, and are
   already scoped to a job by path)
+- Agent webhooks can additionally be HMAC-verified: set `WEBHOOK_SHARED_SECRET`
+  and configure the agent to send an `x-callpilot-signature` header
+  (HMAC-SHA256 of the body). Unset by default so simulation and existing
+  deploys are unaffected; when set, unsigned or mis-signed webhooks get 401
 
 ### Data ownership
 - `jobs`, `calls`, `quotes`, `negotiations`, `profiles` — every row owned by a
@@ -200,5 +207,20 @@ throughout, and a persistent "Report an issue" link for beta feedback.
 | Voice | ElevenLabs Conversational AI + TTS |
 | Reasoning | OpenAI (vision extraction, report generation) |
 | Business sourcing | Tavily |
+| Place lookup | OpenStreetMap (Photon autocomplete + Nominatim) |
 | Telephony | Twilio (optional) |
 | Hosting | Vercel (frontend) + Render (backend) |
+
+---
+
+## Quality
+
+- **Golden-call evals** (`evals/`) — 12 saved reference calls replayed through
+  the *real* extraction and red-flag code (not a reimplementation), scoring the
+  two things the brief judges: does the agent extract every fee, and does it
+  catch the 30%-below-market red flag. `python evals/run_evals.py`, non-zero exit
+  on failure. Mutation-tested: breaking the scaling or the fee-summing makes the
+  matching case fail
+- **CI** (`.github/workflows/ci.yml`) — on every push and PR: backend imports,
+  every vertical config validates, the eval suite runs, and the frontend
+  typechecks and builds

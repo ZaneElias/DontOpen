@@ -1,0 +1,88 @@
+# CI: catch the regressions we have been catching by hand all along.
+#
+# Three jobs, each cheap and each guarding something real:
+#   backend  - the app imports, and every vertical config is valid & loadable
+#   evals    - the golden-call suite passes (fee extraction + red-flag logic)
+#   frontend - typecheck + production build (the thing Vercel runs)
+#
+# No secrets, no live API calls: the eval cases carry captured payloads, and
+# the backend import path is exercised without Supabase/ElevenLabs keys.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: App imports without a live environment
+        # Proves the module graph is intact. Auth/store stay unconfigured on
+        # purpose - a missing key must degrade to 503 at request time, not crash
+        # at import.
+        run: python -c "import main; print('import ok')"
+      - name: Every vertical config loads and is well-formed
+        run: |
+          python - <<'PY'
+          import config
+          from pathlib import Path
+          verticals = [p.stem for p in Path("configs").glob("*.yaml")]
+          assert verticals, "no vertical configs found"
+          for v in verticals:
+              c = config.load_vertical_config(v)
+              for key in ("vertical", "display_name", "job_spec_schema",
+                          "price_benchmark", "red_flag_rules", "counterparty_styles"):
+                  assert key in c, f"{v}.yaml missing '{key}'"
+              assert c["price_benchmark"].get("median_usd"), f"{v}.yaml has no median_usd"
+              # Every counterparty prompt file the config names must exist.
+              for style, meta in c["counterparty_styles"].items():
+                  pf = Path(meta["prompt_file"])
+                  assert pf.exists(), f"{v}.yaml -> {style}: missing {pf}"
+          print(f"ok: {len(verticals)} verticals -> {verticals}")
+          PY
+
+  evals:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r backend/requirements.txt
+      - name: Golden-call evals
+        # Non-zero exit on any failing case fails the job.
+        run: cd backend && python ../evals/run_evals.py
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Production build
+        run: npm run build

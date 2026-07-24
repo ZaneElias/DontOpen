@@ -1,0 +1,30 @@
+{
+  "id": "auto_repair_diagnostic_upsell",
+  "vertical": "auto_repair",
+  "description": "Cross-vertical coverage: the same extraction and red-flag code must work on auto repair, where the benchmark is a flat $450 with no bedroom scaling. Four itemized charges including a diagnostic fee.",
+  "job_fields": {
+    "vehicle_year": 2015,
+    "vehicle_make": "Honda",
+    "vehicle_model": "Civic",
+    "symptom": "grinding from the front when braking",
+    "service_type": "repair",
+    "location": "Charlotte, NC"
+  },
+  "simulation_response": {
+    "simulated_conversation": [
+      {"role": "agent", "message": "Calling about a 2015 Honda Civic — grinding from the front when braking. Customer wants a quote for front brakes.", "time_in_call_secs": 0},
+      {"role": "user", "message": "Precision Auto, this is Mike. Front pads and rotors on a Civic — parts are two eighty, labor's two hours at one ten, so two twenty.", "time_in_call_secs": 10},
+      {"role": "agent", "message": "Five hundred for parts and labor. Is there a diagnostic fee on top?", "time_in_call_secs": 24},
+      {"role": "user", "message": "Hundred and twenty to put it on the lift, but we waive it if you do the work with us. There's also a fifteen dollar shop supplies charge.", "time_in_call_secs": 31},
+      {"role": "agent", "message": "So five fifteen if the diagnostic is waived. Is that firm?", "time_in_call_secs": 44},
+      {"role": "user", "message": "Firm unless we find a seized caliper once it's up. Then we'd call you first.", "time_in_call_secs": 51, "tool_calls": [{"tool_name": "log_quote", "params_as_json": "{\"outcome\": \"quote_given\", \"company_name\": \"Precision Auto Works\", \"base_price\": 500, \"line_items\": [{\"label\": \"Front pads and rotors (parts)\", \"amount\": 280, \"is_optional_or_conditional\": false}, {\"label\": \"Labor (2 hrs @ $110)\", \"amount\": 220, \"is_optional_or_conditional\": false}, {\"label\": \"Diagnostic fee (waived with repair)\", \"amount\": 120, \"is_optional_or_conditional\": true}, {\"label\": \"Shop supplies\", \"amount\": 15, \"is_optional_or_conditional\": false}], \"total_price\": 515, \"binding\": true}"}]}
+    ]
+  },
+  "expect": {
+    "line_item_labels": ["Front pads and rotors (parts)", "Labor (2 hrs @ $110)", "Diagnostic fee (waived with repair)", "Shop supplies"],
+    "total_price": 515.0,
+    "outcome": "quote_given",
+    "binding": true,
+    "red_flags_absent": ["below"]
+  }
+}

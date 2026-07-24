@@ -67,6 +67,18 @@ def call_mode() -> str:
     return mode if mode in ("simulation", "telephony") else "simulation"
 
 
+def webhook_shared_secret() -> str:
+    """Optional HMAC secret for verifying agent webhook calls.
+
+    The log_quote / log_intake_field webhooks skip JWT auth because ElevenLabs
+    calls them, not a browser — leaving job/call id length as the only guard
+    against a forged quote. When this is set, webhooks must carry a matching
+    signature. Unset (the default) keeps the current behaviour, so simulation
+    mode and existing deploys are unaffected until a secret is provisioned.
+    """
+    return os.environ.get("WEBHOOK_SHARED_SECRET", "").strip()
+
+
 @functools.lru_cache(maxsize=8)
 def load_vertical_config(vertical: str) -> Dict[str, Any]:
     """

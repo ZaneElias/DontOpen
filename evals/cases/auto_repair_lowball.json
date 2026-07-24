@@ -1,0 +1,29 @@
+{
+  "id": "auto_repair_lowball",
+  "vertical": "auto_repair",
+  "description": "Auto-repair lowball: $260 against a $450 median (30% floor = $315). Must flag. Confirms the below-market rule reads each vertical's own benchmark rather than a moving-specific constant.",
+  "job_fields": {
+    "vehicle_year": 2015,
+    "vehicle_make": "Honda",
+    "vehicle_model": "Civic",
+    "symptom": "grinding from the front when braking",
+    "service_type": "repair",
+    "location": "Charlotte, NC"
+  },
+  "simulation_response": {
+    "simulated_conversation": [
+      {"role": "agent", "message": "2015 Civic, front brakes — pads and rotors. What would you charge?", "time_in_call_secs": 0},
+      {"role": "user", "message": "Two sixty, out the door.", "time_in_call_secs": 8},
+      {"role": "agent", "message": "Two sixty for pads and rotors both, front axle? That's well under what others quoted.", "time_in_call_secs": 14},
+      {"role": "user", "message": "That's what I said. Bring it in, we'll take a look and go from there.", "time_in_call_secs": 22, "tool_calls": [{"tool_name": "log_quote", "params_as_json": "{\"outcome\": \"quote_given\", \"company_name\": \"Discount Auto Repair\", \"base_price\": 260, \"line_items\": [{\"label\": \"Out the door price\", \"amount\": 260, \"is_optional_or_conditional\": false}], \"total_price\": 260, \"binding\": false, \"notes\": \"Would not confirm parts quality or itemize labor.\"}"}]}
+    ]
+  },
+  "expect": {
+    "line_item_labels": ["Out the door price"],
+    "total_price": 260.0,
+    "outcome": "quote_given",
+    "binding": false,
+    "red_flags_contain": ["below"],
+    "is_red_flag": true
+  }
+}

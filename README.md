@@ -4,8 +4,9 @@ An end-to-end MVP for **THE NEGOTIATOR** (ElevenLabs × Hack-Nation, 6th Global 
 system that gathers real moving-company quotes, reports them in comparable form, negotiates with genuine
 leverage, and returns a ranked recommendation backed by transcript evidence.
 
-Vertical: **moving** — config-driven. Retargeting to auto repair, contractor bids, medical bills, etc. means
-adding one YAML file in `backend/configs/`, not touching application code.
+Verticals: **moving**, **auto repair**, and **home contractors** — config-driven. Each is one YAML file in
+`backend/configs/` plus its counterparty prompts; the third was added with no change to `main.py` or
+`schema.py`. Retargeting to medical bills, etc. is the same drop-in.
 
 ## The one thing that makes this demoable in five minutes
 
@@ -105,9 +106,10 @@ request, neither of which fits Vercel's stateless, time-limited serverless funct
 | Real call-list sourcing | `services/call_list.py` — Tavily (preferred) or Google Places, manual fallback |
 | Price moves from real leverage | `POST /negotiate/{job}/simulate` (or `/start`) cites the actual cheapest gathered quote — never a fabricated number |
 | Red-flag rule (30% under market) | `configs/moving.yaml: red_flag_rules` + `_apply_red_flags()` |
+| **Reference negotiations + evals** | `evals/` — 12 golden calls replayed through the real extraction + red-flag code; `python evals/run_evals.py` |
 | Ranked report, transcript evidence | `GET /report/{job}`, `ReportStage` (table on desktop, cards on mobile) |
 | AI discloses itself, never fabricates | `caller_agent.md` "Identity and disclosure" + "Honesty constraints" |
-| Config-driven vertical swap | `configs/moving.yaml` is the only file a new vertical needs |
+| Config-driven vertical swap | 3 verticals ship (`configs/*.yaml`); the third needed no code change |
 
 ## How the four conversation requirements are handled
 
@@ -122,7 +124,9 @@ request, neither of which fits Vercel's stateless, time-limited serverless funct
 - **Every call ends structured.** `log_quote` records exactly one outcome — itemized quote, callback commitment,
   or documented decline — captured from the transcript (simulation) or the live webhook (telephony).
 
-## What's in-memory / what I'd revisit for production
+## What I'd revisit for production
 
-Persistence (a restart clears jobs), a real audio archive beyond the session, multi-vertical config loaded
-simultaneously, and a smarter negotiation-target policy than "cheapest becomes leverage, call back the rest."
+A real audio archive beyond the session, a smarter negotiation-target policy than "cheapest becomes leverage,
+call back the rest," and a shared-store rate limiter (the current one is in-memory per-IP, fine for a single
+instance). Jobs now persist to Supabase and survive a restart; webhook HMAC verification is available via
+`WEBHOOK_SHARED_SECRET`.

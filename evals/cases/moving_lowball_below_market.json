@@ -1,0 +1,34 @@
+{
+  "id": "moving_lowball_below_market",
+  "vertical": "moving",
+  "description": "The headline case from the brief. $850 on a 2BR (benchmark median $1700, 30% floor $1190) is a classic lowball-then-upcharge. It must be flagged, not ranked best — a cheap quote that wins the ranking is the most expensive failure this product has.",
+  "job_fields": {
+    "origin_address": "Rock Hill, SC",
+    "destination_address": "Charlotte, NC",
+    "bedrooms": 2,
+    "inventory_size": "2br",
+    "stairs_origin": 0,
+    "stairs_destination": 0,
+    "packing_preference": "self_pack"
+  },
+  "simulation_response": {
+    "simulated_conversation": [
+      {"role": "agent", "message": "Hi — I'm an AI assistant calling for a customer planning a move. Do you have a moment for a quote?", "time_in_call_secs": 0},
+      {"role": "user", "message": "Yeah yeah, what do you need.", "time_in_call_secs": 4},
+      {"role": "agent", "message": "Two bedroom, Rock Hill to Charlotte, about 45 miles, no stairs, customer packs themselves.", "time_in_call_secs": 9},
+      {"role": "user", "message": "We can do that for eight fifty. Best price you'll find, guaranteed.", "time_in_call_secs": 18},
+      {"role": "agent", "message": "That's well below what others have quoted. Does eight fifty cover everything — fuel, materials, the full crew?", "time_in_call_secs": 26},
+      {"role": "user", "message": "That's the price. We'll sort the details on the day, don't worry about it.", "time_in_call_secs": 35},
+      {"role": "agent", "message": "Is eight fifty a binding estimate?", "time_in_call_secs": 41},
+      {"role": "user", "message": "It's an estimate. Final's on the day once we see the load.", "time_in_call_secs": 46, "tool_calls": [{"tool_name": "log_quote", "params_as_json": "{\"outcome\": \"quote_given\", \"company_name\": \"Budget Movers Express\", \"base_price\": 850, \"line_items\": [{\"label\": \"All-in price\", \"amount\": 850, \"is_optional_or_conditional\": false}], \"total_price\": 850, \"binding\": false, \"notes\": \"Would not itemize. Final price determined on moving day.\"}"}]}
+    ]
+  },
+  "expect": {
+    "line_item_labels": ["All-in price"],
+    "total_price": 850.0,
+    "outcome": "quote_given",
+    "binding": false,
+    "red_flags_contain": ["below"],
+    "is_red_flag": true
+  }
+}

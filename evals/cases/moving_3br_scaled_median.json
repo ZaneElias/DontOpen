@@ -1,0 +1,29 @@
+{
+  "id": "moving_3br_scaled_median",
+  "vertical": "moving",
+  "description": "Guards the bedroom scaling. $1450 on a 3BR is ABOVE the flat 2BR floor ($1190) but BELOW the 3BR-scaled floor ($2050 x 0.7 = $1435)... marginally above it, so it must NOT flag. If someone drops per_bedroom_adjustment_usd, this case and the 3BR lowball case break in opposite directions and pin the bug.",
+  "job_fields": {
+    "origin_address": "Rock Hill, SC",
+    "destination_address": "Charlotte, NC",
+    "bedrooms": 3,
+    "inventory_size": "3br",
+    "stairs_origin": 0,
+    "stairs_destination": 0,
+    "packing_preference": "self_pack"
+  },
+  "simulation_response": {
+    "simulated_conversation": [
+      {"role": "agent", "message": "Three bedroom house, Rock Hill to Charlotte, ground floor both ends, customer packs.", "time_in_call_secs": 0},
+      {"role": "user", "message": "Three bedroom local — fourteen fifty, and that's everything. Four man crew.", "time_in_call_secs": 14},
+      {"role": "agent", "message": "Fourteen fifty all in, no separate fuel or materials charge? And is it binding?", "time_in_call_secs": 22},
+      {"role": "user", "message": "All in, binding. We don't nickel and dime.", "time_in_call_secs": 29, "tool_calls": [{"tool_name": "log_quote", "params_as_json": "{\"outcome\": \"quote_given\", \"company_name\": \"Piedmont Movers\", \"base_price\": 1450, \"line_items\": [{\"label\": \"All-inclusive local move\", \"amount\": 1450, \"is_optional_or_conditional\": false}], \"total_price\": 1450, \"binding\": true}"}]}
+    ]
+  },
+  "expect": {
+    "line_item_labels": ["All-inclusive local move"],
+    "total_price": 1450.0,
+    "outcome": "quote_given",
+    "binding": true,
+    "red_flags_absent": ["below"]
+  }
+}

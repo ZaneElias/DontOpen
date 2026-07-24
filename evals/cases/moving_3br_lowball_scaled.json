@@ -1,0 +1,30 @@
+{
+  "id": "moving_3br_lowball_scaled",
+  "vertical": "moving",
+  "description": "The other half of the scaling guard. $1250 on a 3BR clears the flat 2BR floor ($1190) so a naive check passes it, but it is below the 3BR-scaled floor ($1435) and must flag. Catches a regression that drops bedroom scaling.",
+  "job_fields": {
+    "origin_address": "Rock Hill, SC",
+    "destination_address": "Charlotte, NC",
+    "bedrooms": 3,
+    "inventory_size": "3br",
+    "stairs_origin": 0,
+    "stairs_destination": 0,
+    "packing_preference": "self_pack"
+  },
+  "simulation_response": {
+    "simulated_conversation": [
+      {"role": "agent", "message": "Three bedroom, Rock Hill to Charlotte, no stairs, customer packs their own boxes.", "time_in_call_secs": 0},
+      {"role": "user", "message": "Twelve fifty. We're cheaper than anyone you'll call today.", "time_in_call_secs": 11},
+      {"role": "agent", "message": "Twelve fifty for a three bedroom — does that include fuel and materials?", "time_in_call_secs": 19},
+      {"role": "user", "message": "Look, it's twelve fifty to get it done. We'll work the rest out.", "time_in_call_secs": 26, "tool_calls": [{"tool_name": "log_quote", "params_as_json": "{\"outcome\": \"quote_given\", \"company_name\": \"QuickShift Moving\", \"base_price\": 1250, \"line_items\": [{\"label\": \"Quoted price\", \"amount\": 1250, \"is_optional_or_conditional\": false}], \"total_price\": 1250, \"binding\": false}"}]}
+    ]
+  },
+  "expect": {
+    "line_item_labels": ["Quoted price"],
+    "total_price": 1250.0,
+    "outcome": "quote_given",
+    "binding": false,
+    "red_flags_contain": ["below"],
+    "is_red_flag": true
+  }
+}

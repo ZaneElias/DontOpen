@@ -1,0 +1,31 @@
+{
+  "id": "moving_no_prices_over_phone",
+  "vertical": "moving",
+  "description": "Stonewaller refuses to quote by phone. The correct outcome is no_prices_over_phone with no invented number — fabricating a price here would poison the leverage the negotiation stage depends on.",
+  "job_fields": {
+    "origin_address": "Rock Hill, SC",
+    "destination_address": "Charlotte, NC",
+    "bedrooms": 2,
+    "inventory_size": "2br",
+    "stairs_origin": 0,
+    "stairs_destination": 0,
+    "packing_preference": "self_pack"
+  },
+  "simulation_response": {
+    "simulated_conversation": [
+      {"role": "agent", "message": "Hi, I'm calling on behalf of a customer to get a moving quote — two bedroom, Rock Hill to Charlotte.", "time_in_call_secs": 0},
+      {"role": "user", "message": "We don't do prices over the phone.", "time_in_call_secs": 7},
+      {"role": "agent", "message": "I understand. Even a rough range for a local two bedroom? The customer is comparing a few options.", "time_in_call_secs": 12},
+      {"role": "user", "message": "No. We'd need an in-home survey first. That's just how we do it.", "time_in_call_secs": 19},
+      {"role": "agent", "message": "Understood. Could someone call back to arrange that survey?", "time_in_call_secs": 25},
+      {"role": "user", "message": "Leave a number, someone'll get back to you.", "time_in_call_secs": 30, "tool_calls": [{"tool_name": "log_quote", "params_as_json": "{\"outcome\": \"no_prices_over_phone\", \"company_name\": \"Metro Van Lines\", \"line_items\": [], \"binding\": false, \"notes\": \"Requires in-home survey before quoting. Offered a callback.\"}"}]}
+    ]
+  },
+  "expect": {
+    "line_item_labels": [],
+    "total_price": null,
+    "outcome": "no_prices_over_phone",
+    "binding": false,
+    "red_flags_absent": ["below"]
+  }
+}

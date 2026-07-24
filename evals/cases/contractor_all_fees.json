@@ -1,0 +1,30 @@
+{
+  "id": "contractor_all_fees",
+  "vertical": "contractor",
+  "description": "Third vertical (n=3 for the config-driven claim). A tough contractor itemizes five line items on a bathroom remodel bid; all must extract, and a fairly-priced binding bid must not flag.",
+  "job_fields": {
+    "project_type": "bathroom_remodel",
+    "scope_summary": "gut and redo a 5x8 hall bathroom, new tile, vanity, tub-to-shower conversion",
+    "square_footage": 40,
+    "materials_provided_by": "contractor",
+    "finish_level": "standard",
+    "location": "Charlotte, NC"
+  },
+  "simulation_response": {
+    "simulated_conversation": [
+      {"role": "agent", "message": "Calling for a bid on a bathroom remodel - 5 by 8 hall bath, full gut, new tile, vanity, and a tub-to-shower conversion. Standard finishes, you supply materials.", "time_in_call_secs": 0},
+      {"role": "user", "message": "Keystone Remodeling, Frank here. Okay, full gut on a five by eight. Labor's the big one - that's eight thousand. Materials at standard grade, call it thirty two hundred.", "time_in_call_secs": 12},
+      {"role": "agent", "message": "Eight thousand labor, thirty two hundred materials. Is there demo and disposal on top, and does this need a permit?", "time_in_call_secs": 26},
+      {"role": "user", "message": "Demo and haul-away is six fifty. Tub-to-shower conversion means we're moving the drain, so a plumbing permit - that's three fifty including me pulling it. And there's a four hundred dollar dumpster fee.", "time_in_call_secs": 36},
+      {"role": "agent", "message": "So eight thousand labor, thirty two hundred materials, six fifty demo, three fifty permit, four hundred dumpster - twelve thousand six hundred. Is that a firm written bid?", "time_in_call_secs": 55},
+      {"role": "user", "message": "That's a fixed-price contract, good for thirty days. We don't do surprise change orders unless you change the scope.", "time_in_call_secs": 68, "tool_calls": [{"tool_name": "log_quote", "params_as_json": "{\"outcome\": \"quote_given\", \"company_name\": \"Keystone Remodeling\", \"base_price\": 8000, \"line_items\": [{\"label\": \"Labor\", \"amount\": 8000, \"is_optional_or_conditional\": false}, {\"label\": \"Materials (standard grade)\", \"amount\": 3200, \"is_optional_or_conditional\": false}, {\"label\": \"Demo and disposal\", \"amount\": 650, \"is_optional_or_conditional\": false}, {\"label\": \"Plumbing permit\", \"amount\": 350, \"is_optional_or_conditional\": false}, {\"label\": \"Dumpster fee\", \"amount\": 400, \"is_optional_or_conditional\": false}], \"total_price\": 12600, \"binding\": true}"}]}
+    ]
+  },
+  "expect": {
+    "line_item_labels": ["Labor", "Materials (standard grade)", "Demo and disposal", "Plumbing permit", "Dumpster fee"],
+    "total_price": 12600.0,
+    "outcome": "quote_given",
+    "binding": true,
+    "red_flags_absent": ["below", "binding"]
+  }
+}

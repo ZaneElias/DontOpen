@@ -1,0 +1,29 @@
+{
+  "id": "moving_malformed_line_item",
+  "vertical": "moving",
+  "description": "One line item is malformed (amount is prose, not a number) — a real failure mode when an LLM fills the tool call. The good items must still extract; the bad one is skipped rather than failing the whole quote. Pins the try/except in _line_items_from_params.",
+  "job_fields": {
+    "origin_address": "Rock Hill, SC",
+    "destination_address": "Charlotte, NC",
+    "bedrooms": 2,
+    "inventory_size": "2br",
+    "stairs_origin": 0,
+    "stairs_destination": 0,
+    "packing_preference": "self_pack"
+  },
+  "simulation_response": {
+    "simulated_conversation": [
+      {"role": "agent", "message": "Two bedroom local move, Rock Hill to Charlotte. What's your price?", "time_in_call_secs": 0},
+      {"role": "user", "message": "Sixteen hundred base. Fuel's one fifty. Insurance depends on declared value, varies.", "time_in_call_secs": 12},
+      {"role": "agent", "message": "So seventeen fifty plus whatever insurance comes to. Binding on the seventeen fifty?", "time_in_call_secs": 24},
+      {"role": "user", "message": "Yes, binding.", "time_in_call_secs": 30, "tool_calls": [{"tool_name": "log_quote", "params_as_json": "{\"outcome\": \"quote_given\", \"company_name\": \"Catawba Moving Co\", \"base_price\": 1600, \"line_items\": [{\"label\": \"Base move\", \"amount\": 1600, \"is_optional_or_conditional\": false}, {\"label\": \"Fuel\", \"amount\": 150, \"is_optional_or_conditional\": false}, {\"label\": \"Insurance\", \"amount\": \"varies by declared value\", \"is_optional_or_conditional\": true}], \"total_price\": 1750, \"binding\": true}"}]}
+    ]
+  },
+  "expect": {
+    "line_item_labels": ["Base move", "Fuel"],
+    "total_price": 1750.0,
+    "outcome": "quote_given",
+    "binding": true,
+    "red_flags_absent": ["below"]
+  }
+}

@@ -1,0 +1,76 @@
+# Vertical config: CONTRACTOR BIDS
+#
+# Third vertical, added to prove the config-driven claim past n=2: no change to
+# main.py, schema.py, or any prompt template - only this file plus the three
+# counterparty prompts it names. Home-improvement contractors (bathroom remodel,
+# roof, deck, etc.) are one of the examples the brief itself suggests.
+
+vertical: contractor
+display_name: "Home Contractors"
+
+# -- Job spec taxonomy -------------------------------------------------------
+job_spec_schema:
+  project_type: {type: string, required: true, asked_by_interview: true, enum: [bathroom_remodel, kitchen_remodel, roofing, deck, flooring, painting, other], description: "the kind of job"}
+  scope_summary: {type: string, required: true, asked_by_interview: true, description: "what the customer wants done, in their words"}
+  square_footage: {type: number, required: false, asked_by_interview: true, description: "approx area involved, if known"}
+  materials_provided_by: {type: string, required: false, asked_by_interview: true, enum: [contractor, homeowner, mixed], description: "who supplies materials"}
+  finish_level: {type: string, required: false, asked_by_interview: true, enum: [budget, standard, premium], description: "quality tier of finishes"}
+  property_type: {type: string, required: false, asked_by_interview: true, enum: [house, condo, apartment, commercial]}
+  timeline: {type: string, required: false, asked_by_interview: true, enum: [asap, this_month, flexible], description: "how soon they want it started"}
+  permit_needed: {type: boolean, required: false, asked_by_interview: true, description: "does the job likely need a permit"}
+  location: {type: string, required: true, asked_by_interview: true, is_location: true, description: "city or zip to find contractors"}
+  special_notes: {type: string, required: false, asked_by_interview: true}
+
+# -- Price benchmarks (ground truth for red-flag detection) ------------------
+# Reference job: a standard 5x8 ft bathroom remodel, mid-range finishes.
+# HomeAdvisor / Angi aggregate data centers this around $12,000; the 30% floor
+# (~$8,400) flags a genuine lowball without tripping fair bids. per_sqft knob
+# scales the median for jobs that report an area, mirroring moving's
+# per_bedroom_adjustment_usd.
+price_benchmark:
+  source: "HomeAdvisor + Angi aggregate remodel cost data (see README for citations)"
+  reference_job: "standard 5x8 ft bathroom remodel, mid-range finishes"
+  low_usd: 6500
+  median_usd: 12000
+  high_usd: 25000
+  per_sqft_adjustment_usd: 250   # rough scaling knob for jobs reporting square_footage != 40
+  permit_fee_usd: 350
+
+# -- Red-flag rules ----------------------------------------------------------
+red_flag_rules:
+  - id: below_market_30pct
+    description: "Any bid 30%+ below the benchmark median is a warning sign, not a win - the classic underbid-then-change-order pattern where the price balloons mid-project."
+    threshold_pct_below_median: 30
+  - id: no_binding_commitment
+    description: "Bid given but the contractor won't put the number in a written, fixed-price contract - leaves room for open-ended change orders."
+  - id: cash_only_or_large_deposit
+    description: "Cash-only payment, or a deposit over 25% of the bid before any work or materials - a common precursor to a contractor who disappears mid-job per BBB guidance."
+
+# -- Negotiation levers ------------------------------------------------------
+negotiation_levers:
+  - id: cite_competing_quote
+    description: "State the lowest binding competing bid and ask this contractor to beat or match it. Never state a number that isn't an actual gathered bid."
+  - id: question_itemized_fee
+    description: "Ask for justification of any line not itemized (e.g. 'demo and disposal' or 'misc materials' with no breakdown)."
+  - id: ask_price_match
+    description: "Ask 'can you match $X' rather than open-ended 'can you do better'."
+  - id: ask_extras_at_same_price
+    description: "If price won't move, ask whether an extended warranty, permit handling, or a finish upgrade can be included at no extra cost."
+
+# -- Counterparty roster (per-vertical personas, loaded from prompt files) ----
+counterparty_styles:
+  tough_negotiator:
+    prompt_file: prompts/counterparty_contractor_tough.md
+    company_name: "Keystone Remodeling"
+    first_message: "Keystone Remodeling, this is Frank. What are you looking to get done?"
+    description: "Bids high first, negotiates hard, concedes only against real competing numbers."
+  stonewaller:
+    prompt_file: prompts/counterparty_contractor_stonewall.md
+    company_name: "Heritage Home Builders"
+    first_message: "Heritage Builders. Yeah, we'd have to come out and look before I could tell you anything."
+    description: "Resists giving any number without an on-site visit; has to be worked past 'I can't bid sight-unseen'."
+  hard_sell_upseller:
+    prompt_file: prompts/counterparty_contractor_hardsell.md
+    company_name: "Premier Renovations"
+    first_message: "Premier Renovations, where your dream home comes true! What project can we make amazing today?"
+    description: "Bids low to win the job, then piles on change orders and finish upgrades; classic underbid-then-upcharge."
