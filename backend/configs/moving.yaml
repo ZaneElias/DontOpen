@@ -28,6 +28,16 @@ job_spec_schema:
   packing_preference: {type: string, required: true, enum: [self_pack, full_pack, partial_pack], asked_by_interview: true}
   special_handling_notes: {type: string, required: false, asked_by_interview: true}
 
+# ── Call-list search defaults ───────────────────────────────────────────
+# What the Calls stage searches Tavily for. Lives here, not in the frontend:
+# a hardcoded "moving companies" default meant every vertical searched for
+# movers, so auto repair and contractor jobs returned moving companies.
+# location_field names the job-spec field to seed the search location from —
+# an empty location makes Tavily return generic national results.
+call_list:
+  category: "moving companies"
+  location_field: destination_address
+
 # ── Price benchmarks (ground truth for red-flag detection) ──────────────
 # Sourced from FMCSA guidance + moveBuddha aggregate data for a comparable
 # local/regional move. Override with a live lookup if you wire one in;

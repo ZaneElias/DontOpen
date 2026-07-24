@@ -28,6 +28,16 @@ export interface JobSpecFieldDef {
 
 export type JobSpecSchema = Record<string, JobSpecFieldDef>;
 
+/** One configured vertical, from GET /verticals. */
+export interface VerticalInfo {
+  vertical: string;
+  display_name: string;
+  /** What the Calls stage searches for, e.g. "auto repair shops". */
+  call_list_category: string;
+  /** Job-spec field to seed the search location from. */
+  call_list_location_field: string;
+}
+
 export type CallStatus = "queued" | "dialing" | "in_progress" | "completed" | "failed" | "no_answer";
 
 export type CallOutcome =

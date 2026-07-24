@@ -23,6 +23,11 @@ job_spec_schema:
   location: {type: string, required: true, asked_by_interview: true, is_location: true, description: "city or zip to find shops"}
   special_notes: {type: string, required: false, asked_by_interview: true}
 
+# -- Call-list search defaults ------------------------------------------------
+call_list:
+  category: "auto repair shops"
+  location_field: location
+
 # ── Price benchmarks (ground truth for red-flag detection) ──────────────────────────────────────────────────────────────────────────────────────
 price_benchmark:
   source: "RepairPal fair-price ranges + aggregate shop quotes (see README for citations)"

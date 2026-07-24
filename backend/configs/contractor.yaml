@@ -21,6 +21,11 @@ job_spec_schema:
   location: {type: string, required: true, asked_by_interview: true, is_location: true, description: "city or zip to find contractors"}
   special_notes: {type: string, required: false, asked_by_interview: true}
 
+# -- Call-list search defaults ------------------------------------------------
+call_list:
+  category: "home improvement contractors"
+  location_field: location
+
 # -- Price benchmarks (ground truth for red-flag detection) ------------------
 # Reference job: a standard 5x8 ft bathroom remodel, mid-range finishes.
 # HomeAdvisor / Angi aggregate data centers this around $12,000; the 30% floor

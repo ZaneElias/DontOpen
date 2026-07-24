@@ -528,7 +528,15 @@ def list_verticals() -> List[Dict[str, Any]]:
     for path in sorted(config.CONFIGS_DIR.glob("*.yaml")):
         try:
             vc = config.load_vertical_config(path.stem)
-            out.append({"vertical": vc["vertical"], "display_name": vc.get("display_name", path.stem)})
+            cl = vc.get("call_list") or {}
+            out.append({
+                "vertical": vc["vertical"],
+                "display_name": vc.get("display_name", path.stem),
+                # Search defaults for the Calls stage. Sent to the client so it
+                # never has to hardcode a per-vertical category.
+                "call_list_category": cl.get("category", ""),
+                "call_list_location_field": cl.get("location_field", ""),
+            })
         except Exception:
             continue
     return out

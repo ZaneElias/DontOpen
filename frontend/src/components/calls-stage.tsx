@@ -18,7 +18,7 @@ import { useAuth } from "@/components/auth-provider";
 import { api, ApiError } from "@/lib/api-client";
 import { usePolling } from "@/hooks/use-polling";
 import { cn } from "@/lib/utils";
-import type { CallListResult, CallOutcome, CallRecord, CallStatus, HealthStatus, JobSpec, NegotiationStyle, Quote } from "@/lib/types";
+import type { CallListResult, CallOutcome, CallRecord, CallStatus, HealthStatus, JobSpec, NegotiationStyle, Quote, VerticalInfo } from "@/lib/types";
 
 // Every call ends in exactly one structured outcome — surface each one
 // explicitly, including the "failure" modes the agent handled gracefully.
@@ -59,14 +59,39 @@ export function CallsStage({
   const [starting, setStarting] = useState(false);
   const [started, setStarted] = useState(false);
 
-  const [searchCategory, setSearchCategory] = useState("moving companies");
-  const [searchLocation, setSearchLocation] = useState(String(job.fields.destination_address ?? ""));
+  // Search defaults come from the vertical's config, not a hardcoded string.
+  // A literal "moving companies" default meant auto-repair and contractor jobs
+  // searched Tavily for movers and got moving companies back — and an empty
+  // location returned generic national results instead of anything local.
+  const [vertical, setVertical] = useState<VerticalInfo | null>(null);
+  const [searchCategory, setSearchCategory] = useState("");
+  const [searchLocation, setSearchLocation] = useState("");
   const [searchResults, setSearchResults] = useState<CallListResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [searched, setSearched] = useState(false);
 
   const [manualName, setManualName] = useState("");
   const [manualPhone, setManualPhone] = useState("");
+
+  useEffect(() => {
+    let alive = true;
+    api
+      .listVerticals()
+      .then((all) => {
+        if (!alive) return;
+        const v = all.find((x) => x.vertical === job.vertical) ?? null;
+        setVertical(v);
+        if (v?.call_list_category) setSearchCategory((prev) => prev || v.call_list_category);
+        // Seed the location from whichever job field this vertical designates
+        // (destination_address for a move, location for repair/contractor).
+        const seed = v?.call_list_location_field ? job.fields[v.call_list_location_field] : undefined;
+        if (seed) setSearchLocation((prev) => prev || String(seed));
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [job.vertical, job.fields]);
 
   const callsActive = started;
 
@@ -273,15 +298,19 @@ export function CallsStage({
                 {health.call_list_source !== "manual" ? (
                   <div className="space-y-3">
                     <div className="flex flex-col gap-2 sm:flex-row">
-                      <Input value={searchCategory} onChange={(e) => setSearchCategory(e.target.value)} placeholder="moving companies" />
-                      {/* Same pick-a-place control as the brief: a nonsense
-                          location here is what made Search look broken. */}
+                      <Input
+                        value={searchCategory}
+                        onChange={(e) => setSearchCategory(e.target.value)}
+                        placeholder={vertical?.call_list_category || "businesses"}
+                      />
+                      {/* standalone: this row has no .cp-field wrapper, so the
+                          control must draw its own box or it renders invisible. */}
                       <div className="flex-1">
                         <PlaceAutocomplete
+                          variant="standalone"
                           value={searchLocation}
                           onChange={setSearchLocation}
-                          placeholder="Charlotte, NC"
-                          className="h-9 rounded-md border border-line-strong bg-paper-raised px-3 py-1 text-sm shadow-sm"
+                          placeholder="City or postcode"
                         />
                       </div>
                       <Button className="shrink-0" onClick={handleSearch} disabled={searching}>

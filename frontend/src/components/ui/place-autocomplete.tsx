@@ -23,11 +23,23 @@ export function PlaceAutocomplete({
   onChange,
   placeholder,
   className,
+  variant = "field",
 }: {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   className?: string;
+  /**
+   * "field"      — sits inside a .cp-field wrapper, which draws the border and
+   *                label. Uses .cp-control (transparent, borderless).
+   * "standalone" — draws its own box, for rows with no .cp-field around them.
+   *
+   * This exists because .cp-control sets `background: transparent; border: 0`
+   * and a transparent placeholder, and it is unlayered CSS — so it beats any
+   * Tailwind utility passed via className. Used standalone it rendered a fully
+   * invisible input, which is how the Calls stage lost its location field.
+   */
+  variant?: "field" | "standalone";
 }) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [open, setOpen] = useState(false);
@@ -105,7 +117,12 @@ export function PlaceAutocomplete({
   return (
     <div ref={boxRef} className="relative">
       <input
-        className={cn("cp-control", className)}
+        className={cn(
+          variant === "standalone"
+            ? "flex h-9 w-full min-w-0 rounded-md border border-line-strong bg-paper-raised px-3 py-1 text-sm text-ink shadow-sm outline-none placeholder:text-ink-muted/70 focus-visible:border-action focus-visible:ring-2 focus-visible:ring-action/40"
+            : "cp-control",
+          className
+        )}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onFocus={() => suggestions.length > 0 && setOpen(true)}

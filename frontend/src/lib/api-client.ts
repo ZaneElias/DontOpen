@@ -9,6 +9,7 @@ import {
   type NegotiationStyle,
   type Quote,
   type Report,
+  type VerticalInfo,
 } from "@/lib/types";
 import { getAccessToken } from "@/lib/supabase";
 
@@ -70,7 +71,7 @@ export const api = {
   createIntake: (vertical = "moving") =>
     request<JobSpec>("/intake", { method: "POST", body: JSON.stringify({ vertical }) }),
 
-  listVerticals: () => request<{ vertical: string; display_name: string }[]>("/verticals"),
+  listVerticals: () => request<VerticalInfo[]>("/verticals"),
 
   getIntake: (jobId: string) => request<JobSpec>(`/intake/${jobId}`),
 
