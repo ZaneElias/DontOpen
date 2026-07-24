@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Loader2, MapPin } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
@@ -49,6 +49,9 @@ export function PlaceAutocomplete({
   // we just wrote back into the field.
   const justPicked = useRef(false);
   const boxRef = useRef<HTMLDivElement>(null);
+  // Stable id so the combobox can point aria-controls at its own listbox even
+  // when several of these render on one page (origin + destination).
+  const listId = useId();
 
   useEffect(() => {
     if (justPicked.current) {
@@ -57,14 +60,19 @@ export function PlaceAutocomplete({
     }
     const q = value.trim();
     if (q.length < 2) {
+      // Clearing stale suggestions as the field empties is the point of the
+      // effect, not an accidental cascade.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSuggestions([]);
       return;
     }
     // Debounced: the geocoder is a shared public instance, and a request per
     // keystroke would be both slow and rude.
     let alive = true;
-    setLoading(true);
     const t = setTimeout(async () => {
+      // Spinner starts when the request does, not on every keystroke — which
+      // also keeps the state change out of the effect body.
+      if (alive) setLoading(true);
       try {
         const res = await api.suggestPlaces(q);
         if (!alive) return;
@@ -131,6 +139,7 @@ export function PlaceAutocomplete({
         autoComplete="off"
         role="combobox"
         aria-expanded={open}
+        aria-controls={listId}
         aria-autocomplete="list"
       />
       {loading && (
@@ -138,6 +147,7 @@ export function PlaceAutocomplete({
       )}
       {open && suggestions.length > 0 && (
         <ul
+          id={listId}
           role="listbox"
           // z-50 so it clears the glass card below it; the field sits inside a
           // stacking context created by the card's backdrop-filter.

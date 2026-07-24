@@ -61,7 +61,6 @@ export function AuthedAudio({ src, className }: { src: string; className?: strin
   }
 
   if (objectUrl) {
-    // eslint-disable-next-line jsx-a11y/media-has-caption
     return <audio controls autoPlay src={objectUrl} className={className} />;
   }
 

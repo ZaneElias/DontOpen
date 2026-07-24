@@ -84,5 +84,10 @@ jobs:
         run: npm ci
       - name: Typecheck
         run: npx tsc --noEmit
+      - name: Lint
+        # Was missing at first, and tsc+build pass happily on things eslint
+        # rejects - including a genuine rules-of-hooks violation (a hook called
+        # after an early return) that neither of the other two can see.
+        run: npm run lint
       - name: Production build
         run: npm run build

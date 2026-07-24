@@ -21,6 +21,10 @@ export function BackToApp() {
   }
 
   return (
+    // Intentionally a plain <a>, not next/link: this tab was opened by the app,
+    // and the handler tries window.close() first. A client-side <Link> would
+    // navigate this tab instead of closing it and returning to the original.
+    // eslint-disable-next-line @next/next/no-html-link-for-pages
     <a
       href="/"
       onClick={handleClick}

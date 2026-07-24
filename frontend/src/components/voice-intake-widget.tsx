@@ -43,10 +43,17 @@ export function VoiceIntakeWidget({
   const [schema, setSchema] = useState<JobSpecSchema | null>(null);
   const [schemaFailed, setSchemaFailed] = useState(false);
 
+  // Mount flag for the portal: createPortal needs document.body, which doesn't
+  // exist during SSR. This is the standard client-only guard, and setting it
+  // once on mount is exactly what it's for.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     let alive = true;
+    // Reset on job change so a previous job's schema can't briefly drive the
+    // widget — the agent reads its question list once, at init.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSchema(null);
     setSchemaFailed(false);
     api

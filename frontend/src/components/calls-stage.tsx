@@ -128,7 +128,6 @@ export function CallsStage({
     return () => {
       alive = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [job.job_id]);
 
   function addDemoPersona(style: NegotiationStyle, label: string) {
@@ -220,11 +219,14 @@ export function CallsStage({
     return map;
   }, [quotes]);
 
+  // Hooks must run before any early return: this sat below the `!health` guard,
+  // so the hook count changed the moment health loaded. React keys hook state by
+  // call order, so that corrupts it.
+  const reduce = useReducedMotion();
+
   if (!health) {
     return <Skeleton className="h-64 w-full" />;
   }
-
-  const reduce = useReducedMotion();
 
   return (
     <div className="space-y-6">
@@ -441,8 +443,18 @@ function DemoPersonaPicker({
   >(null);
 
   useEffect(() => {
+    // Clearing first is deliberate: switching vertical must show the skeleton
+    // rather than the previous vertical's personas while the new ones load.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setRoster(null);
-    api.counterpartyRoster(vertical).then(setRoster).catch(() => setRoster([]));
+    let alive = true;
+    api
+      .counterpartyRoster(vertical)
+      .then((r) => alive && setRoster(r))
+      .catch(() => alive && setRoster([]));
+    return () => {
+      alive = false;
+    };
   }, [vertical]);
 
   if (roster == null) return <Skeleton className="h-24 w-full" />;

@@ -94,11 +94,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [userId]);
 
   useEffect(() => {
+    // Loading the profile when the signed-in user changes IS the synchronisation
+    // this effect exists for; refreshProfile sets state as its first act.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void refreshProfile();
   }, [refreshProfile]);
 
   useEffect(() => {
     if (!supabaseConfigured) {
+      // No Supabase to wait on, so resolve the initial load immediately rather
+      // than leaving the app on a skeleton forever.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoading(false);
       return;
     }
